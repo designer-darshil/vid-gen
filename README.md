@@ -111,3 +111,4 @@ lyrics-video-generator/
 └── wsgi.py                  # WSGI / development entrypoint
 ```
 # vid-gen
+# vid-gen
