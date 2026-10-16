@@ -367,9 +367,28 @@ class PreviewEngine {
         const h = this.height;
         const cfg = this.templateConfig;
 
-        // 1. Solid Canvas Background
-        ctx.fillStyle = cfg.background_color || '#090909';
-        ctx.fillRect(0, 0, w, h);
+        // 1. Cinematic Studio Canvas Background
+        if (cfg.background_color && cfg.background_color !== '#090909') {
+            ctx.fillStyle = cfg.background_color;
+            ctx.fillRect(0, 0, w, h);
+        } else {
+            // Elegant cinematic default background: deep charcoal with subtle ambient vignette
+            const bgGrad = ctx.createRadialGradient(w * 0.5, h * 0.45, w * 0.08, w * 0.5, h * 0.5, w * 0.72);
+            bgGrad.addColorStop(0, '#15151c');
+            bgGrad.addColorStop(0.65, '#0d0d12');
+            bgGrad.addColorStop(1, '#070709');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, w, h);
+
+            // Subtle filmic vignette rim
+            const vignette = ctx.createLinearGradient(0, 0, 0, h);
+            vignette.addColorStop(0, 'rgba(0, 0, 0, 0.45)');
+            vignette.addColorStop(0.18, 'rgba(0, 0, 0, 0)');
+            vignette.addColorStop(0.82, 'rgba(0, 0, 0, 0)');
+            vignette.addColorStop(1, 'rgba(0, 0, 0, 0.55)');
+            ctx.fillStyle = vignette;
+            ctx.fillRect(0, 0, w, h);
+        }
 
         // 2. Active Background Image Layer with Fit / Pan / Zoom / Blur / Rotation
         const activeImageClip = this.getActiveImageClip(this.currentTime);
@@ -595,7 +614,29 @@ class PreviewEngine {
     }
 
     getActiveLyricLine(time) {
-        return this.lyrics.find(l => time >= l.start && time <= l.end);
+        if (!this.lyrics || this.lyrics.length === 0) {
+            // Sample composition fallback for empty projects
+            return {
+                start: 0,
+                end: Math.max(10, this.duration),
+                text: "Cruising under midnight cinema skies",
+                words: [
+                    { word: "Cruising", start: 0, end: 2.0 },
+                    { word: "under", start: 2.0, end: 3.5 },
+                    { word: "midnight", start: 3.5, end: 5.5 },
+                    { word: "cinema", start: 5.5, end: 7.5 },
+                    { word: "skies", start: 7.5, end: 10.0 }
+                ]
+            };
+        }
+        const active = this.lyrics.find(l => time >= l.start && time <= l.end);
+        if (active) return active;
+        if (!this.isPlaying && this.lyrics.length > 0) {
+            if (time <= this.lyrics[0].start) {
+                return this.lyrics[0];
+            }
+        }
+        return null;
     }
 
     getActiveImageClip(time) {

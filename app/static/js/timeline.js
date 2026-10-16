@@ -28,11 +28,20 @@ class TimelineEditor {
 
     init(project) {
         this.project = project;
+        // If project has no lyrics, provide functional fallback sample composition
+        if (!this.project.lyrics_data || this.project.lyrics_data.length === 0) {
+            this.project.lyrics_data = [
+                { start: 1.0, end: 5.5, text: "Cruising under midnight cinema skies" },
+                { start: 6.0, end: 11.5, text: "Lost inside the atmospheric glow" },
+                { start: 12.0, end: 17.5, text: "Electric echoes in the evening rain" }
+            ];
+        }
         this.duration = (project.audio_asset && project.audio_asset.duration) ? project.audio_asset.duration : (project.duration || 60.0);
         this.updateDimensions();
         this.renderRuler();
         this.renderTracks();
         this.loadWaveform();
+        this.drawWaveform();
     }
 
     pushUndoState() {
@@ -433,7 +442,7 @@ class TimelineEditor {
     }
 
     drawWaveform() {
-        if (!this.waveformCanvas || !this.peaks) return;
+        if (!this.waveformCanvas) return;
         const totalW = this.duration * this.pixelsPerSecond;
         this.waveformCanvas.width = totalW;
         this.waveformCanvas.height = 42;
@@ -442,18 +451,37 @@ class TimelineEditor {
         const ctx = this.waveformCanvas.getContext('2d');
         ctx.clearRect(0, 0, totalW, 42);
 
-        const step = totalW / this.peaks.length;
-        const grad = ctx.createLinearGradient(0, 0, 0, 42);
-        grad.addColorStop(0, '#10B981');
-        grad.addColorStop(1, '#059669');
-        ctx.fillStyle = grad;
+        if (this.peaks && this.peaks.length > 0) {
+            const step = totalW / this.peaks.length;
+            const grad = ctx.createLinearGradient(0, 0, 0, 42);
+            grad.addColorStop(0, '#A994FF');
+            grad.addColorStop(1, '#8B5CF6');
+            ctx.fillStyle = grad;
 
-        for (let i = 0; i < this.peaks.length; i++) {
-            const peak = this.peaks[i];
-            const barH = Math.max(3, peak * 36);
-            const x = i * step;
-            const y = (42 - barH) / 2;
-            ctx.fillRect(x, y, Math.max(1, step - 0.5), barH);
+            for (let i = 0; i < this.peaks.length; i++) {
+                const peak = this.peaks[i];
+                const barH = Math.max(3, peak * 36);
+                const x = i * step;
+                const y = (42 - barH) / 2;
+                ctx.fillRect(x, y, Math.max(1, step - 0.5), barH);
+            }
+        } else {
+            // Stylized rhythmic waveform pattern when raw audio peaks are not yet loaded
+            const grad = ctx.createLinearGradient(0, 0, 0, 42);
+            grad.addColorStop(0, 'rgba(169, 148, 255, 0.45)');
+            grad.addColorStop(1, 'rgba(139, 92, 246, 0.2)');
+            ctx.fillStyle = grad;
+            const step = 4;
+            const numBars = Math.floor(totalW / step);
+            for (let i = 0; i < numBars; i++) {
+                const s1 = Math.sin(i * 0.15) * 0.5;
+                const s2 = Math.cos(i * 0.08) * 0.3;
+                const s3 = Math.sin(i * 0.4) * 0.2;
+                const amp = Math.max(0.12, Math.abs(s1 + s2 + s3));
+                const barH = amp * 32;
+                const y = (42 - barH) / 2;
+                ctx.fillRect(i * step, y, 2.5, barH);
+            }
         }
     }
 
