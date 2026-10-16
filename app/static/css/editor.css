@@ -204,7 +204,7 @@
 
 /* Creative Tool Rail on the left */
 .creative-rail {
-    width: 76px;
+    width: 66px;
     background: var(--surface-primary);
     border-right: 1px solid var(--border-subtle);
     display: flex;
@@ -217,13 +217,13 @@
 }
 
 .rail-btn {
-    width: 64px;
-    height: 60px;
+    width: 56px;
+    height: 56px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 4px;
+    gap: 3px;
     background: transparent;
     border: 1px solid transparent;
     border-radius: var(--radius-md);
@@ -252,7 +252,7 @@
 
 /* Flyout Tool Drawer */
 .rail-drawer {
-    width: 360px;
+    width: 310px;
     background: var(--surface-elevated);
     border-right: 1px solid var(--border-subtle);
     display: flex;
@@ -344,13 +344,14 @@
     max-width: 96%;
     max-height: 94%;
     aspect-ratio: 16 / 9;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
-    border: 1px solid var(--border-subtle);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.85), 0 0 24px rgba(169, 148, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: var(--radius-sm);
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #090909;
+    background: #050508;
+    overflow: hidden;
 }
 
 .preview-canvas {
@@ -366,15 +367,16 @@
     position: absolute;
     top: 10px;
     left: 12px;
-    background: rgba(17, 17, 17, 0.85);
-    border: 1px solid var(--border-subtle);
-    padding: 3px 8px;
-    border-radius: var(--radius-sm);
+    background: rgba(14, 14, 20, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 3px 10px;
+    border-radius: 4px;
     font-size: 16px;
     font-family: var(--font-mono);
     color: var(--text-muted);
     pointer-events: none;
     z-index: 10;
+    backdrop-filter: blur(4px);
 }
 
 .canvas-drag-hint {
@@ -382,18 +384,20 @@
     bottom: 12px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(17, 17, 17, 0.85);
-    border: 1px solid var(--border-subtle);
+    background: rgba(14, 14, 20, 0.88);
+    border: 1px solid rgba(169, 148, 255, 0.3);
     color: var(--text-secondary);
     font-size: 16px;
     padding: 4px 14px;
     border-radius: 20px;
     pointer-events: none;
-    opacity: 0.8;
-    transition: opacity 0.2s ease;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    backdrop-filter: blur(4px);
+}
+.canvas-aspect-wrapper:hover .canvas-drag-hint {
+    opacity: 0.9;
 }
 
 /* Floating Stage Transport Controls */
@@ -448,7 +452,7 @@
    4. Contextual Inspector on the Right
    ========================================================================== */
 .studio-inspector {
-    width: 340px;
+    width: 320px;
     background: var(--surface-primary);
     border-left: 1px solid var(--border-subtle);
     display: flex;
@@ -456,15 +460,40 @@
     min-height: 0;
     flex-shrink: 0;
     z-index: 20;
+    transition: width 0.2s ease, opacity 0.2s ease;
+}
+.studio-inspector.collapsed {
+    display: none !important;
 }
 
 .inspector-header {
     height: 52px;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     border-bottom: 1px solid var(--border-subtle);
     flex-shrink: 0;
-    padding: 0 var(--space-2);
+    padding: 0 var(--space-3);
+    gap: 8px;
+}
+
+.btn-close-inspector {
+    color: var(--text-muted);
+    font-size: 16px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+}
+.btn-close-inspector:hover {
+    color: var(--text-primary);
+    background: var(--surface-hover);
 }
 
 .inspector-tabs {

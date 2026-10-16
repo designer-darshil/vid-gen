@@ -28,7 +28,7 @@ class PreviewEngine {
         this._animationFrame = null;
         this.isDraggingCanvas = false;
         this.isResizingText = false;
-        this.selectedLayer = 'lyric'; // 'lyric', 'background', 'composition'
+        this.selectedLayer = null; // null when unselected, 'lyric' when clicked
         this.snapGuideX = null;
         this.snapGuideY = null;
         this.textBounds = null;
@@ -185,11 +185,17 @@ class PreviewEngine {
             dragStartX = coords.x;
             dragStartY = coords.y;
 
-            // Check if user clicked on bottom-right resize handle
-            if (this.textBounds) {
-                const brX = this.textBounds.x + this.textBounds.w;
-                const brY = this.textBounds.y + this.textBounds.h;
-                if (isPointInHandle(coords.x, coords.y, brX, brY, 24)) {
+            // Check if user clicked on any corner resize handle (when lyric layer is selected)
+            if (this.selectedLayer === 'lyric' && this.textBounds) {
+                const b = this.textBounds;
+                const handles = [
+                    { x: b.x + b.w, y: b.y + b.h }, // bottom-right
+                    { x: b.x, y: b.y + b.h },       // bottom-left
+                    { x: b.x + b.w, y: b.y },       // top-right
+                    { x: b.x, y: b.y }              // top-left
+                ];
+                const hit = handles.some(h => isPointInHandle(coords.x, coords.y, h.x, h.y, 22));
+                if (hit) {
                     this.isResizingText = true;
                     this.canvas.style.cursor = 'nwse-resize';
                     return;
@@ -202,7 +208,7 @@ class PreviewEngine {
             const approxHalfW = (this.textBounds ? this.textBounds.w / 2 : this.width * 0.35);
             const approxHalfH = (this.textBounds ? this.textBounds.h / 2 : 40);
 
-            if (Math.abs(coords.x - textX) <= approxHalfW + 20 && Math.abs(coords.y - textY) <= approxHalfH + 20) {
+            if (Math.abs(coords.x - textX) <= approxHalfW + 15 && Math.abs(coords.y - textY) <= approxHalfH + 15) {
                 this.isDraggingCanvas = true;
                 this.selectedLayer = 'lyric';
                 this.canvas.style.cursor = 'grabbing';
@@ -210,8 +216,9 @@ class PreviewEngine {
                     window.Editor.switchInspectorTab('layer');
                 }
             } else {
-                // Clicked outside text: select background layer
-                this.selectedLayer = 'background';
+                // Clicked outside text: deselect layer completely (removes selection rectangle)
+                this.selectedLayer = null;
+                this.canvas.style.cursor = 'default';
                 if (window.Editor && window.Editor.switchInspectorTab) {
                     window.Editor.switchInspectorTab('background');
                 }
@@ -361,40 +368,147 @@ class PreviewEngine {
         el.textContent = `${curM.toString().padStart(2, '0')}:${curS.toString().padStart(2, '0')}.${curMs.toString().padStart(2, '0')} / ${durM.toString().padStart(2, '0')}:${durS.toString().padStart(2, '0')}.${durMs.toString().padStart(2, '0')}`;
     }
 
+    drawCinematicFallbackBackground(ctx, w, h, time = 0) {
+        ctx.save();
+
+        // 1. Celestial Midnight Sky (Deep Obsidian to Twilight Lavender)
+        const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.72);
+        skyGrad.addColorStop(0, '#050508');
+        skyGrad.addColorStop(0.35, '#0a0911');
+        skyGrad.addColorStop(0.65, '#13101e');
+        skyGrad.addColorStop(0.88, '#1e1633');
+        skyGrad.addColorStop(1, '#2c1e48');
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, w, h * 0.72);
+
+        // 2. Distant Stars & Celestial Shimmer (deterministic pseudo-random)
+        const starCount = 65;
+        for (let i = 0; i < starCount; i++) {
+            const starX = ((i * 137.5) % 1) * w;
+            const starY = ((i * 269.3) % 0.65) * h;
+            const size = (i % 3 === 0) ? 1.6 : 1.0;
+            const twinkle = 0.35 + 0.55 * Math.sin(time * 1.8 + i);
+            ctx.fillStyle = `rgba(241, 239, 234, ${twinkle})`;
+            ctx.beginPath();
+            ctx.arc(starX, starY, size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // 3. Ambient Lavender Horizon Haze Nebula
+        const nebulaX = w * 0.5;
+        const nebulaY = h * 0.68;
+        const nebulaGrad = ctx.createRadialGradient(nebulaX, nebulaY, 10, nebulaX, nebulaY, w * 0.48);
+        nebulaGrad.addColorStop(0, 'rgba(169, 148, 255, 0.28)');
+        nebulaGrad.addColorStop(0.35, 'rgba(142, 116, 235, 0.14)');
+        nebulaGrad.addColorStop(0.7, 'rgba(110, 80, 190, 0.05)');
+        nebulaGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = nebulaGrad;
+        ctx.fillRect(0, h * 0.2, w, h * 0.6);
+
+        // 4. Distant Mountain Ridge Layer 1 (Far silhouette)
+        ctx.fillStyle = '#100d1a';
+        ctx.beginPath();
+        ctx.moveTo(0, h * 0.68);
+        const farPeaks = [
+            [0.08, 0.62], [0.18, 0.65], [0.28, 0.59], [0.38, 0.64],
+            [0.50, 0.57], [0.62, 0.63], [0.74, 0.58], [0.86, 0.65], [1.0, 0.61]
+        ];
+        farPeaks.forEach(([px, py]) => ctx.lineTo(px * w, py * h));
+        ctx.lineTo(w, h * 0.72);
+        ctx.lineTo(0, h * 0.72);
+        ctx.closePath();
+        ctx.fill();
+
+        // 5. Midground Mountain Ridge Layer 2 (Sharp craggy peaks)
+        ctx.fillStyle = '#0a0812';
+        ctx.beginPath();
+        ctx.moveTo(0, h * 0.70);
+        const midPeaks = [
+            [0.05, 0.66], [0.14, 0.69], [0.24, 0.63], [0.34, 0.68],
+            [0.46, 0.61], [0.58, 0.67], [0.69, 0.62], [0.82, 0.68], [0.93, 0.64], [1.0, 0.69]
+        ];
+        midPeaks.forEach(([px, py]) => ctx.lineTo(px * w, py * h));
+        ctx.lineTo(w, h * 0.74);
+        ctx.lineTo(0, h * 0.74);
+        ctx.closePath();
+        ctx.fill();
+
+        // 6. Terrain Ground Plane (Dark Obsidian Valley)
+        const groundGrad = ctx.createLinearGradient(0, h * 0.68, 0, h);
+        groundGrad.addColorStop(0, '#09080e');
+        groundGrad.addColorStop(0.3, '#07060a');
+        groundGrad.addColorStop(1, '#040406');
+        ctx.fillStyle = groundGrad;
+        ctx.fillRect(0, h * 0.68, w, h * 0.32);
+
+        // 7. Distant Neon Horizon Beam
+        const horizY = h * 0.68;
+        const horizGlow = ctx.createLinearGradient(0, horizY - 14, 0, horizY + 14);
+        horizGlow.addColorStop(0, 'rgba(169, 148, 255, 0)');
+        horizGlow.addColorStop(0.5, 'rgba(169, 148, 255, 0.45)');
+        horizGlow.addColorStop(1, 'rgba(169, 148, 255, 0)');
+        ctx.fillStyle = horizGlow;
+        ctx.fillRect(0, horizY - 14, w, 28);
+
+        // Horizon fine neon line
+        ctx.strokeStyle = 'rgba(212, 203, 255, 0.65)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(0, horizY);
+        ctx.lineTo(w, horizY);
+        ctx.stroke();
+
+        // 8. Atmospheric Ground Mist Ribbons (Gentle undulating wave drift)
+        const mistWave = Math.sin(time * 0.6) * 12;
+        const mistGrad = ctx.createLinearGradient(0, h * 0.67, 0, h * 0.85);
+        mistGrad.addColorStop(0, 'rgba(169, 148, 255, 0.12)');
+        mistGrad.addColorStop(0.5, 'rgba(139, 92, 246, 0.06)');
+        mistGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = mistGrad;
+        ctx.beginPath();
+        ctx.moveTo(0, h * 0.75 + mistWave);
+        ctx.bezierCurveTo(w * 0.3, h * 0.70 - mistWave, w * 0.7, h * 0.80 + mistWave, w, h * 0.73 - mistWave);
+        ctx.lineTo(w, h * 0.88);
+        ctx.lineTo(0, h * 0.88);
+        ctx.closePath();
+        ctx.fill();
+
+        // 9. Subtle 35mm Filmic Grain Texture
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.025)';
+        const grainStep = 24;
+        for (let gx = 0; gx < w; gx += grainStep) {
+            for (let gy = 0; gy < h; gy += grainStep) {
+                const grainSeed = (gx * 37 + gy * 79 + (time * 10 | 0)) % 100;
+                if (grainSeed > 68) {
+                    ctx.fillRect(gx + (grainSeed % 8), gy + ((grainSeed * 3) % 8), 1.5, 1.5);
+                }
+            }
+        }
+
+        // 10. Deep Filmic Corner Vignette
+        const vignette = ctx.createRadialGradient(w * 0.5, h * 0.5, w * 0.28, w * 0.5, h * 0.5, w * 0.76);
+        vignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
+        vignette.addColorStop(0.7, 'rgba(4, 4, 6, 0.35)');
+        vignette.addColorStop(1, 'rgba(2, 2, 4, 0.85)');
+        ctx.fillStyle = vignette;
+        ctx.fillRect(0, 0, w, h);
+
+        ctx.restore();
+    }
+
     renderFrame() {
         const ctx = this.ctx;
         const w = this.width;
         const h = this.height;
         const cfg = this.templateConfig;
 
-        // 1. Cinematic Studio Canvas Background
-        if (cfg.background_color && cfg.background_color !== '#090909') {
-            ctx.fillStyle = cfg.background_color;
-            ctx.fillRect(0, 0, w, h);
-        } else {
-            // Elegant cinematic default background: deep charcoal with subtle ambient vignette
-            const bgGrad = ctx.createRadialGradient(w * 0.5, h * 0.45, w * 0.08, w * 0.5, h * 0.5, w * 0.72);
-            bgGrad.addColorStop(0, '#15151c');
-            bgGrad.addColorStop(0.65, '#0d0d12');
-            bgGrad.addColorStop(1, '#070709');
-            ctx.fillStyle = bgGrad;
-            ctx.fillRect(0, 0, w, h);
-
-            // Subtle filmic vignette rim
-            const vignette = ctx.createLinearGradient(0, 0, 0, h);
-            vignette.addColorStop(0, 'rgba(0, 0, 0, 0.45)');
-            vignette.addColorStop(0.18, 'rgba(0, 0, 0, 0)');
-            vignette.addColorStop(0.82, 'rgba(0, 0, 0, 0)');
-            vignette.addColorStop(1, 'rgba(0, 0, 0, 0.55)');
-            ctx.fillStyle = vignette;
-            ctx.fillRect(0, 0, w, h);
-        }
-
-        // 2. Active Background Image Layer with Fit / Pan / Zoom / Blur / Rotation
+        // 1. Background Rendering: Uploaded Media or Built-in Cinematic Procedural Fallback
         const activeImageClip = this.getActiveImageClip(this.currentTime);
+        let hasRenderedImage = false;
+
         if (activeImageClip && this.imageCache.has(activeImageClip.asset_id)) {
             const img = this.imageCache.get(activeImageClip.asset_id);
-            if (img && img.complete) {
+            if (img && img.complete && img.naturalWidth > 0) {
                 ctx.save();
                 const clipProgress = (this.currentTime - activeImageClip.start) / Math.max(0.1, (activeImageClip.end - activeImageClip.start));
 
@@ -421,21 +535,14 @@ class PreviewEngine {
                     ctx.filter = `blur(${cfg.bg_blur}px)`;
                 }
 
+                // Strict Proportional Scaling: NEVER stretch artwork
                 const fitMode = cfg.bg_fit || 'cover';
                 let drawW = w;
                 let drawH = h;
-                const imgRatio = img.width / img.height;
+                const imgRatio = img.naturalWidth / img.naturalHeight;
                 const canvasRatio = w / h;
 
-                if (fitMode === 'cover') {
-                    if (imgRatio > canvasRatio) {
-                        drawH = h;
-                        drawW = h * imgRatio;
-                    } else {
-                        drawW = w;
-                        drawH = w / imgRatio;
-                    }
-                } else if (fitMode === 'contain') {
+                if (fitMode === 'contain') {
                     if (imgRatio > canvasRatio) {
                         drawW = w;
                         drawH = w / imgRatio;
@@ -444,13 +551,42 @@ class PreviewEngine {
                         drawW = h * imgRatio;
                     }
                 } else {
-                    // fill exact
-                    drawW = w;
-                    drawH = h;
+                    // Default Proportional Cover
+                    if (imgRatio > canvasRatio) {
+                        drawH = h;
+                        drawW = h * imgRatio;
+                    } else {
+                        drawW = w;
+                        drawH = w / imgRatio;
+                    }
                 }
 
                 ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
                 ctx.restore();
+
+                // Dimming overlay
+                const op = cfg.overlay_opacity !== undefined ? cfg.overlay_opacity : 0.38;
+                if (op > 0) {
+                    ctx.fillStyle = `rgba(8, 8, 12, ${op})`;
+                    ctx.fillRect(0, 0, w, h);
+                }
+                hasRenderedImage = true;
+            }
+        }
+
+        if (!hasRenderedImage) {
+            // Built-in Cinematic Fallback: Dark midnight landscape, distant neon horizon, atmospheric haze, subtle film grain and restrained lavender light
+            this.drawCinematicFallbackBackground(ctx, w, h, this.currentTime);
+
+            // Optional custom background color tint if specified
+            if (cfg.background_color && cfg.background_color !== '#090909') {
+                ctx.save();
+                ctx.globalAlpha = 0.3;
+                ctx.fillStyle = cfg.background_color;
+                ctx.fillRect(0, 0, w, h);
+                ctx.restore();
+            }
+        }
 
                 // Dimming overlay
                 const op = cfg.overlay_opacity !== undefined ? cfg.overlay_opacity : 0.4;
@@ -528,28 +664,66 @@ class PreviewEngine {
                 h: boxH
             };
 
-            // Draw direct manipulation selection handles when selected
+            // Draw direct manipulation selection handles ONLY when lyric layer is selected
             if (this.selectedLayer === 'lyric') {
                 ctx.save();
-                ctx.strokeStyle = 'rgba(169, 148, 255, 0.7)';
-                ctx.lineWidth = 1.5;
-                ctx.setLineDash([6, 6]);
+                ctx.strokeStyle = '#A994FF';
+                ctx.lineWidth = 2.5;
+                ctx.setLineDash([8, 6]);
                 ctx.strokeRect(this.textBounds.x, this.textBounds.y, this.textBounds.w, this.textBounds.h);
 
-                // Corner resize handle (bottom-right)
+                // Floating Layer Tag Badge above top-left
                 ctx.setLineDash([]);
-                ctx.fillStyle = '#A994FF';
-                const brX = this.textBounds.x + this.textBounds.w;
-                const brY = this.textBounds.y + this.textBounds.h;
+                const badgeText = "✦ Typography Layer • Drag to Move";
+                ctx.font = '600 14px "Geist", "Inter", sans-serif';
+                const tagW = ctx.measureText(badgeText).width + 20;
+                const tagH = 26;
+                const tagX = this.textBounds.x;
+                const tagY = this.textBounds.y - tagH - 8;
+
+                ctx.fillStyle = 'rgba(16, 16, 24, 0.94)';
+                ctx.strokeStyle = 'rgba(169, 148, 255, 0.6)';
+                ctx.lineWidth = 1;
                 ctx.beginPath();
-                ctx.arc(brX, brY, 6, 0, Math.PI * 2);
+                ctx.roundRect ? ctx.roundRect(tagX, tagY, tagW, tagH, 4) : ctx.rect(tagX, tagY, tagW, tagH);
                 ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#F1EFEA';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(badgeText, tagX + 10, tagY + tagH / 2);
+
+                // 4 Tactile Corner Handles
+                const b = this.textBounds;
+                const corners = [
+                    [b.x, b.y],                     // top-left
+                    [b.x + b.w, b.y],               // top-right
+                    [b.x, b.y + b.h],               // bottom-left
+                    [b.x + b.w, b.y + b.h]          // bottom-right
+                ];
+
+                corners.forEach(([cx, cy]) => {
+                    // Outer shadow
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                    ctx.fillRect(cx - 7, cy - 7, 14, 14);
+
+                    // Inner handle
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(cx - 6, cy - 6, 12, 12);
+                    ctx.strokeStyle = '#A994FF';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(cx - 6, cy - 6, 12, 12);
+                });
 
                 // Center position anchor dot
-                ctx.fillStyle = 'rgba(241, 239, 234, 0.9)';
+                ctx.fillStyle = '#A994FF';
                 ctx.beginPath();
-                ctx.arc(posX, posY, 4, 0, Math.PI * 2);
+                ctx.arc(posX, posY, 5, 0, Math.PI * 2);
                 ctx.fill();
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
 
                 ctx.restore();
             }
@@ -640,10 +814,26 @@ class PreviewEngine {
     }
 
     getActiveImageClip(time) {
-        if (!this.projectData || !this.projectData.timeline_data) return null;
-        const tracks = this.projectData.timeline_data.tracks || [];
-        const imageTrack = tracks.find(t => t.type === 'image');
-        if (!imageTrack || !imageTrack.clips) return null;
-        return imageTrack.clips.find(c => time >= c.start && time <= c.end);
+        if (this.projectData && this.projectData.timeline_data) {
+            const tracks = this.projectData.timeline_data.tracks || [];
+            const imageTrack = tracks.find(t => t.type === 'image');
+            if (imageTrack && imageTrack.clips && imageTrack.clips.length > 0) {
+                const clip = imageTrack.clips.find(c => time >= c.start && time <= c.end);
+                if (clip) return clip;
+            }
+        }
+        // Fallback to project-level uploaded image asset if available
+        if (this.projectData && this.projectData.assets) {
+            const imgAsset = this.projectData.assets.find(a => a.asset_type === 'image');
+            if (imgAsset) {
+                return {
+                    asset_id: imgAsset.id,
+                    start: 0,
+                    end: this.duration || 60,
+                    opacity: 1.0
+                };
+            }
+        }
+        return null;
     }
 }

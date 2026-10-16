@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_TEMPLATE_CONFIG = {
     "template_id": "midnight_cinema",  # midnight_cinema, soft_focus, editorial_serif, kinetic_type, dream_sequence, minimal_verse, karaoke_highlight
     "font_family": "'Cinzel', 'Playfair Display', serif",
-    "font_size": 48,
+    "font_size": 56,
     "font_weight": "700",
     "letter_spacing": 3.0,
     "line_height": 1.3,
@@ -25,7 +25,7 @@ DEFAULT_TEMPLATE_CONFIG = {
     "glow_color": "rgba(169, 148, 255, 0.4)",
     "glow_size": 20,
     "text_align": "center",
-    "position_y": 78,  # percentage from top
+    "position_y": 74,  # percentage from top
     "position_x": 50,  # percentage from left
     "animation_type": "cinematic-rise",  # fade-darkness, blur-focus, cinematic-rise, tracking-reveal, typewriter, word-highlight, scale-drift, beat-pulse
     "animation_duration": 0.45,

@@ -74,7 +74,23 @@ const Editor = {
         }
     },
 
+    toggleInspector(open) {
+        const inspector = document.getElementById('studio-inspector');
+        if (!inspector) return;
+        if (open === undefined) {
+            inspector.classList.toggle('collapsed');
+        } else {
+            inspector.classList.toggle('collapsed', !open);
+        }
+        const isCollapsed = inspector.classList.contains('collapsed');
+        const toggleBtn = document.getElementById('btn-toggle-inspector');
+        if (toggleBtn) {
+            toggleBtn.classList.toggle('active', !isCollapsed);
+        }
+    },
+
     switchInspectorTab(tabId) {
+        this.toggleInspector(true);
         document.querySelectorAll('.inspector-tab').forEach(t => {
             t.classList.toggle('active', t.getAttribute('data-tab') === tabId);
         });

@@ -482,6 +482,13 @@ class TimelineEditor {
                 const y = (42 - barH) / 2;
                 ctx.fillRect(i * step, y, 2.5, barH);
             }
+
+            // Clearly identified placeholder indicator until audio analysis is computed
+            ctx.save();
+            ctx.fillStyle = 'rgba(241, 239, 234, 0.55)';
+            ctx.font = '500 13px "Geist", "Inter", sans-serif';
+            ctx.fillText('AUDIO TRACK • PLACEHOLDER WAVEFORM (UPLOAD AUDIO TO ANALYZE)', 24, 25);
+            ctx.restore();
         }
     }
 
