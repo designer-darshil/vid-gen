@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}Projects — LyricStudio{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-layout">
+    <!-- Top Navigation -->
+    <header class="top-nav">
+        <div class="nav-left">
+            <a href="{{ url_for('dashboard.index') }}" class="nav-brand">
+                <svg width="22" height="22" viewBox="0 0 32 32" fill="none" class="brand-mark">
+                    <rect width="32" height="32" rx="6" fill="#1D1D1D"/>
+                    <path d="M8 19V13M12 23V9M16 26V6M20 21V11M24 18V14" stroke="#7C5CFC" stroke-width="2.2" stroke-linecap="round"/>
+                </svg>
+                <span class="brand-name">LyricStudio</span>
+            </a>
+
+            <nav class="nav-links">
+                <a href="{{ url_for('dashboard.index') }}" class="nav-link active">Projects</a>
+                <a href="{{ url_for('dashboard.design_system') }}" class="nav-link">Design System</a>
+            </nav>
+        </div>
+
+        <div class="nav-actions">
+            <div class="storage-indicator" title="Local storage used">
+                <span class="storage-label">{{ storage_mb }} / {{ max_storage_mb }} MB</span>
+                <div class="storage-track">
+                    <div class="storage-bar" style="width: {{ [(storage_mb / max_storage_mb * 100), 100]|min }}%;"></div>
+                </div>
+            </div>
+
+            <div class="user-menu">
+                <span class="user-name"><i class="fa-solid fa-user"></i> {{ username }}</span>
+                <a href="{{ url_for('auth.logout') }}" class="btn-icon" title="Sign out">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="dashboard-content">
+        <div class="dashboard-header">
+            <div>
+                <h1>Projects</h1>
+                <p>Create and edit animated lyrics video compositions</p>
+            </div>
+            <button class="btn btn-primary" onclick="openNewProjectModal()">
+                <i class="fa-solid fa-plus"></i> New project
+            </button>
+        </div>
+
+        <!-- Project Grid -->
+        <div class="projects-grid" id="projects-container">
+            {% if projects %}
+                {% for p in projects %}
+                <div class="project-card" id="project-card-{{ p.id }}">
+                    <div class="project-thumb" onclick="location.href='{{ url_for('editor.open_editor', project_id=p.id) }}'">
+                        <span class="badge badge-neutral project-aspect-badge">{{ p.aspect_ratio }}</span>
+                        <i class="fa-solid fa-film project-thumb-icon"></i>
+                    </div>
+
+                    <div class="project-details">
+                        <a href="{{ url_for('editor.open_editor', project_id=p.id) }}" class="project-title" title="{{ p.title }}">{{ p.title }}</a>
+                        
+                        <div class="project-meta">
+                            <span class="meta-item"><i class="fa-solid fa-layer-group"></i> {{ p.asset_count }} Assets</span>
+                            <span class="meta-item"><i class="fa-regular fa-clock"></i> {{ p.updated_at|format_date }}</span>
+
+                            <div class="project-actions">
+                                <button class="btn-icon" title="Duplicate project" onclick="duplicateProject('{{ p.id }}')">
+                                    <i class="fa-regular fa-copy"></i>
+                                </button>
+                                <button class="btn-icon" title="Rename project" onclick="renameProject('{{ p.id }}', '{{ p.title }}')">
+                                    <i class="fa-regular fa-pen-to-square"></i>
+                                </button>
+                                <button class="btn-icon btn-icon-danger" title="Delete project" onclick="deleteProject('{{ p.id }}')">
+                                    <i class="fa-regular fa-trash-can"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <i class="fa-solid fa-folder-open empty-icon"></i>
+                    <h3>No projects yet</h3>
+                    <p>Create your first project to align song lyrics, select animated typography, and export high-definition video.</p>
+                    <button class="btn btn-primary" onclick="openNewProjectModal()">
+                        <i class="fa-solid fa-plus"></i> New project
+                    </button>
+                </div>
+            {% endif %}
+        </div>
+    </main>
+</div>
+
+<!-- New Project Modal -->
+<div class="modal-backdrop" id="new-project-modal">
+    <div class="modal-window">
+        <div class="modal-header">
+            <h3>New project</h3>
+            <button class="btn-icon" onclick="closeModal('new-project-modal')" title="Close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="form-label" for="proj-title">Project title</label>
+                <input class="form-control" type="text" id="proj-title" placeholder="e.g. Midnight City — Official Lyric Video" autofocus>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Aspect ratio</label>
+                <div class="aspect-selector">
+                    <div class="aspect-tile selected" data-aspect="16:9" onclick="selectAspect(this)">
+                        <div class="aspect-icon"><div class="aspect-box box-16-9"></div></div>
+                        <span class="aspect-name">16:9 Landscape</span>
+                        <span class="aspect-desc">YouTube / Desktop</span>
+                    </div>
+                    <div class="aspect-tile" data-aspect="9:16" onclick="selectAspect(this)">
+                        <div class="aspect-icon"><div class="aspect-box box-9-16"></div></div>
+                        <span class="aspect-name">9:16 Vertical</span>
+                        <span class="aspect-desc">Shorts / Reels / TikTok</span>
+                    </div>
+                    <div class="aspect-tile" data-aspect="1:1" onclick="selectAspect(this)">
+                        <div class="aspect-icon"><div class="aspect-box box-1-1"></div></div>
+                        <span class="aspect-name">1:1 Square</span>
+                        <span class="aspect-desc">Social posts</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="proj-quality">Target resolution</label>
+                <select class="form-control form-select" id="proj-quality">
+                    <option value="1080p" selected>1080p Full HD</option>
+                    <option value="4K">4K Ultra HD</option>
+                    <option value="720p">720p HD</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('new-project-modal')">Cancel</button>
+            <button class="btn btn-primary" onclick="submitCreateProject()">
+                Create project
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

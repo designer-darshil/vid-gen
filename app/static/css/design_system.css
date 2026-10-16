@@ -1,0 +1,294 @@
+/* ==========================================================================
+   LyricStudio Design System Documentation Stylesheet
+   Minimal, refined showcase for tokens, typography, components, and accessibility.
+   STRICT RULE: The minimum font size anywhere is 16px. No text below 16px.
+   ========================================================================== */
+
+.ds-layout {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg-app);
+}
+
+.ds-container {
+    max-width: 1240px;
+    width: 100%;
+    margin: 0 auto;
+    padding: var(--space-7) var(--space-6) var(--space-9);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+}
+
+/* Header */
+.ds-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding-bottom: var(--space-6);
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.ds-header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+}
+
+.ds-title {
+    font-size: var(--font-size-3xl);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+}
+
+.ds-subtitle {
+    font-size: var(--font-size-lg);
+    color: var(--text-secondary);
+    max-width: 820px;
+    line-height: var(--line-height-body);
+}
+
+/* Sticky Nav for Sections */
+.ds-nav {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    overflow-x: auto;
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--border-subtle);
+    position: sticky;
+    top: 56px;
+    background: var(--bg-app);
+    z-index: 90;
+}
+
+.ds-nav-btn {
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+    color: var(--text-secondary);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: all var(--transition-fast);
+}
+
+.ds-nav-btn:hover {
+    color: var(--text-primary);
+    background: var(--surface-hover);
+}
+
+.ds-nav-btn.active {
+    color: var(--text-primary);
+    background: var(--surface-elevated);
+}
+
+/* Section Blocks */
+.ds-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    scroll-margin-top: 120px;
+}
+
+.ds-section-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.ds-section-title {
+    font-size: var(--font-size-2xl);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+}
+
+.ds-section-desc {
+    font-size: var(--font-size-base);
+    color: var(--text-secondary);
+}
+
+.ds-card {
+    background: var(--surface-primary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    padding: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+}
+
+.ds-card-title {
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+}
+
+/* Grid Layouts */
+.ds-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-5);
+}
+
+.ds-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-4);
+}
+
+.ds-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-4);
+}
+
+/* Color Swatches */
+.ds-swatch {
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.ds-swatch-color {
+    height: 72px;
+    width: 100%;
+}
+
+.ds-swatch-info {
+    padding: var(--space-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.ds-swatch-name {
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+    color: var(--text-primary);
+}
+
+.ds-swatch-value {
+    font-size: var(--font-size-base);
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+}
+
+/* Typography Samples */
+.ds-type-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.ds-type-meta {
+    font-size: var(--font-size-base);
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+    min-width: 180px;
+    flex-shrink: 0;
+}
+
+.ds-type-sample {
+    flex: 1;
+}
+
+/* Spacing Scale Visualizer */
+.ds-spacing-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-2) 0;
+}
+
+.ds-spacing-bar-wrap {
+    width: 280px;
+}
+
+.ds-spacing-bar {
+    height: 24px;
+    background: var(--accent-primary);
+    border-radius: 2px;
+}
+
+/* Interactive Component Demos */
+.ds-demo-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+}
+
+.ds-demo-col {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    flex: 1;
+}
+
+/* Contrast Pair Table */
+.ds-contrast-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.ds-contrast-table th, .ds-contrast-table td {
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: var(--font-size-base);
+    text-align: left;
+}
+
+.ds-contrast-table th {
+    color: var(--text-muted);
+    font-weight: var(--font-weight-medium);
+}
+
+/* Layout Preview Mockups */
+.ds-mockup-frame {
+    background: var(--bg-app);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.ds-mockup-bar {
+    height: 40px;
+    background: var(--surface-primary);
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--space-4);
+}
+
+.ds-mockup-content {
+    padding: var(--space-5);
+    display: flex;
+    gap: var(--space-4);
+    min-height: 200px;
+}
+
+@media (max-width: 900px) {
+    .ds-grid-2, .ds-grid-3, .ds-grid-4 {
+        grid-template-columns: 1fr;
+    }
+    .ds-type-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

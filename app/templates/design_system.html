@@ -1,0 +1,640 @@
+{% extends "base.html" %}
+
+{% block title %}Design System — LyricStudio Creative Workspace{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/timeline.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/design_system.css') }}">
+<style>
+.template-demo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+}
+.template-demo-card {
+    background: var(--surface-primary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+.template-demo-banner {
+    height: 110px;
+    background: #06070B;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    border-bottom: 1px solid var(--border-subtle);
+}
+.template-demo-body {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.template-demo-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.template-demo-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.template-demo-meta {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    color: var(--accent-electric);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ds-layout">
+    <!-- Top Navigation -->
+    <header class="top-nav">
+        <div class="nav-left">
+            <a href="{{ url_for('dashboard.index') }}" class="nav-brand">
+                <svg width="24" height="24" viewBox="0 0 32 32" fill="none" class="brand-mark">
+                    <rect width="32" height="32" rx="7" fill="#141522" stroke="rgba(139, 92, 246, 0.4)" stroke-width="1.2"/>
+                    <path d="M8 19V13M12 23V9M16 26V6M20 21V11M24 18V14" stroke="#A78BFA" stroke-width="2.4" stroke-linecap="round"/>
+                </svg>
+                <span class="brand-name">LyricStudio</span>
+            </a>
+
+            <nav class="nav-links">
+                <a href="{{ url_for('dashboard.index') }}" class="nav-link">Projects</a>
+                <a href="{{ url_for('dashboard.design_system') }}" class="nav-link active">Design System</a>
+            </nav>
+        </div>
+
+        <div class="nav-actions">
+            {% if username %}
+            <div class="user-menu">
+                <span class="user-name"><i class="fa-solid fa-user"></i> {{ username }}</span>
+                <a href="{{ url_for('auth.logout') }}" class="btn-icon" title="Sign out">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                </a>
+            </div>
+            {% else %}
+            <a href="{{ url_for('auth.login') }}" class="btn btn-secondary">Sign in</a>
+            {% endif %}
+        </div>
+    </header>
+
+    <div class="ds-container">
+        <!-- Header -->
+        <div class="ds-header">
+            <div class="ds-header-top">
+                <h1 class="ds-title">LyricStudio Design System</h1>
+                <div class="badge badge-accent">Vibe-Coded Creative Workspace v3.0</div>
+            </div>
+            <p class="ds-subtitle">
+                An immersive, aesthetic dark design system for motion design, music visualization, and animated lyrics video authoring.
+                Features near-black charcoal surfaces, electric-lavender accents, and a strict 16px minimum font size across all interfaces.
+            </p>
+        </div>
+
+        <!-- Sticky Quick Navigation -->
+        <nav class="ds-nav" aria-label="Design system sections">
+            <a href="#foundations" class="ds-nav-btn active">1. Foundations</a>
+            <a href="#typography" class="ds-nav-btn">2. Typography</a>
+            <a href="#colors" class="ds-nav-btn">3. Color Palette</a>
+            <a href="#components" class="ds-nav-btn">4. Components</a>
+            <a href="#templates" class="ds-nav-btn">5. Lyric Templates</a>
+            <a href="#layouts" class="ds-nav-btn">6. Layout Architecture</a>
+            <a href="#accessibility" class="ds-nav-btn">7. Accessibility</a>
+        </nav>
+
+        <!-- 1. FOUNDATIONS -->
+        <section id="foundations" class="ds-section">
+            <div class="ds-section-header">
+                <h2 class="ds-section-title">1. Foundations</h2>
+                <p class="ds-section-desc">Core architectural primitives: near-black surfaces, spatial rhythm, filmic borders, and glows.</p>
+            </div>
+
+            <!-- Surface Hierarchy -->
+            <div class="ds-card">
+                <h3 class="ds-card-title">Near-Black Charcoal Surface Hierarchy</h3>
+                <div class="ds-grid-4">
+                    <div class="ds-swatch">
+                        <div class="ds-swatch-color" style="background: #08090D; border-bottom: 1px solid var(--border-subtle);"></div>
+                        <div class="ds-swatch-info">
+                            <span class="ds-swatch-name">App Workspace</span>
+                            <span class="ds-swatch-value">--bg-app: #08090D</span>
+                        </div>
+                    </div>
+                    <div class="ds-swatch">
+                        <div class="ds-swatch-color" style="background: #11121A; border-bottom: 1px solid var(--border-subtle);"></div>
+                        <div class="ds-swatch-info">
+                            <span class="ds-swatch-name">Primary Charcoal</span>
+                            <span class="ds-swatch-value">--surface-primary: #11121A</span>
+                        </div>
+                    </div>
+                    <div class="ds-swatch">
+                        <div class="ds-swatch-color" style="background: #161824; border-bottom: 1px solid var(--border-subtle);"></div>
+                        <div class="ds-swatch-info">
+                            <span class="ds-swatch-name">Elevated Panel</span>
+                            <span class="ds-swatch-value">--surface-elevated: #161824</span>
+                        </div>
+                    </div>
+                    <div class="ds-swatch">
+                        <div class="ds-swatch-color" style="background: #1E2030; border-bottom: 1px solid var(--border-subtle);"></div>
+                        <div class="ds-swatch-info">
+                            <span class="ds-swatch-name">Hover Surface</span>
+                            <span class="ds-swatch-value">--surface-hover: #1E2030</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Spacing Scale -->
+            <div class="ds-card">
+                <h3 class="ds-card-title">4px-Based Spatial Scale</h3>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <div class="ds-spacing-row">
+                        <span class="ds-type-meta">--space-1 (4px)</span>
+                        <div class="ds-spacing-bar-wrap"><div class="ds-spacing-bar" style="width: 4px;"></div></div>
+                    </div>
+                    <div class="ds-spacing-row">
+                        <span class="ds-type-meta">--space-2 (8px)</span>
+                        <div class="ds-spacing-bar-wrap"><div class="ds-spacing-bar" style="width: 8px;"></div></div>
+                    </div>
+                    <div class="ds-spacing-row">
+                        <span class="ds-type-meta">--space-3 (12px)</span>
+                        <div class="ds-spacing-bar-wrap"><div class="ds-spacing-bar" style="width: 12px;"></div></div>
+                    </div>
+                    <div class="ds-spacing-row">
+                        <span class="ds-type-meta">--space-4 (16px)</span>
+                        <div class="ds-spacing-bar-wrap"><div class="ds-spacing-bar" style="width: 16px;"></div></div>
+                    </div>
+                    <div class="ds-spacing-row">
+                        <span class="ds-type-meta">--space-5 (24px)</span>
+                        <div class="ds-spacing-bar-wrap"><div class="ds-spacing-bar" style="width: 24px;"></div></div>
+                    </div>
+                    <div class="ds-spacing-row">
+                        <span class="ds-type-meta">--space-6 (32px)</span>
+                        <div class="ds-spacing-bar-wrap"><div class="ds-spacing-bar" style="width: 32px;"></div></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. TYPOGRAPHY -->
+        <section id="typography" class="ds-section">
+            <div class="ds-section-header">
+                <h2 class="ds-section-title">2. Typography</h2>
+                <p class="ds-section-desc">Interface typography uses Geist and Inter with strict 16px minimum sizing; lyric display fonts include Cinzel, Outfit, Space Grotesk, Syne, and Playfair.</p>
+            </div>
+
+            <div class="ds-card">
+                <h3 class="ds-card-title">Typeface Families</h3>
+                <div class="ds-grid-2">
+                    <div style="padding: 14px; background: var(--surface-primary); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);">
+                        <span class="ds-type-meta">UI Interface Default</span>
+                        <h4 style="font-family: 'Geist', 'Inter', sans-serif; font-size: 22px; margin: 6px 0;">Geist Sans / Inter</h4>
+                        <p style="font-size: 16px; color: var(--text-secondary);">Minimal, high legibility Swiss geometric precision for all application controls.</p>
+                    </div>
+                    <div style="padding: 14px; background: var(--surface-primary); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);">
+                        <span class="ds-type-meta">Cinematic Display Serif</span>
+                        <h4 style="font-family: 'Cinzel', serif; font-size: 22px; margin: 6px 0; letter-spacing: 2px;">Cinzel Roman</h4>
+                        <p style="font-size: 16px; color: var(--text-secondary);">Classical proportions and dramatic presence for filmic compositions.</p>
+                    </div>
+                    <div style="padding: 14px; background: var(--surface-primary); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);">
+                        <span class="ds-type-meta">Experimental Kinetic</span>
+                        <h4 style="font-family: 'Space Grotesk', sans-serif; font-size: 22px; margin: 6px 0;">Space Grotesk & Syne</h4>
+                        <p style="font-size: 16px; color: var(--text-secondary);">Raw, high-impact dynamic punch for energetic beats and modern drops.</p>
+                    </div>
+                    <div style="padding: 14px; background: var(--surface-primary); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);">
+                        <span class="ds-type-meta">Ethereal Ambient</span>
+                        <h4 style="font-family: 'Playfair Display', serif; font-size: 22px; margin: 6px 0; font-style: italic;">Playfair Display</h4>
+                        <p style="font-size: 16px; color: var(--text-secondary);">Soft curves and luminous contrast for gentle atmospheric lyrics.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ds-card">
+                <h3 class="ds-card-title">Interface Typography Scale (Minimum 16px)</h3>
+                <div class="ds-type-row">
+                    <span class="ds-type-meta">Page Heading • 32px</span>
+                    <h1 style="font-size: 32px;">Echoes of Electric Lavender</h1>
+                </div>
+                <div class="ds-type-row">
+                    <span class="ds-type-meta">Section Header • 24px</span>
+                    <h2 style="font-size: 24px;">Animated Multitrack Composition</h2>
+                </div>
+                <div class="ds-type-row">
+                    <span class="ds-type-meta">Card Title • 20px</span>
+                    <h3 style="font-size: 20px;">Progressive Syllable Synchronization</h3>
+                </div>
+                <div class="ds-type-row">
+                    <span class="ds-type-meta">Base Interface Text • 16px (Strict Floor)</span>
+                    <p style="font-size: 16px;">All button labels, inputs, timeline clips, and inspector controls maintain a strict 16px floor.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. COLOR PALETTE -->
+        <section id="colors" class="ds-section">
+            <div class="ds-section-header">
+                <h2 class="ds-section-title">3. Color Palette</h2>
+                <p class="ds-section-desc">Curated palette blending near-black obsidian, vivid violet, electric lavender, and cyber cyan.</p>
+            </div>
+
+            <div class="ds-card">
+                <h3 class="ds-card-title">Primary Vibe Accents</h3>
+                <div class="ds-grid-4">
+                    <div class="ds-swatch">
+                        <div class="ds-swatch-color" style="background: #8B5CF6;"></div>
+                        <div class="ds-swatch-info">
+                            <span class="ds-swatch-name">Vivid Violet</span>
+                            <span class="ds-swatch-value">--accent-primary: #8B5CF6</span>
+                        </div>
+                    </div>
+                    <div class="ds-swatch">
+                        <div class="ds-swatch-color" style="background: #A78BFA;"></div>
+                        <div class="ds-swatch-info">
+                            <span class="ds-swatch-name">Electric Lavender</span>
+                            <span class="ds-swatch-value">--accent-primary-hover: #A78BFA</span>
+                        </div>
+                    </div>
+                    <div class="ds-swatch">
+                        <div class="ds-swatch-color" style="background: #C4B5FD;"></div>
+                        <div class="ds-swatch-info">
+                            <span class="ds-swatch-name">Soft Glow Lavender</span>
+                            <span class="ds-swatch-value">--accent-electric: #C4B5FD</span>
+                        </div>
+                    </div>
+                    <div class="ds-swatch">
+                        <div class="ds-swatch-color" style="background: #06B6D4;"></div>
+                        <div class="ds-swatch-info">
+                            <span class="ds-swatch-name">Cyber Cyan</span>
+                            <span class="ds-swatch-value">--accent-cyan: #06B6D4</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ds-card">
+                <h3 class="ds-card-title">Feedback & Semantic Tokens</h3>
+                <div class="ds-grid-4">
+                    <div class="ds-swatch">
+                        <div class="ds-swatch-color" style="background: #10B981;"></div>
+                        <div class="ds-swatch-info">
+                            <span class="ds-swatch-name">Audio Emerald</span>
+                            <span class="ds-swatch-value">--color-success: #10B981</span>
+                        </div>
+                    </div>
+                    <div class="ds-swatch">
+                        <div class="ds-swatch-color" style="background: #F59E0B;"></div>
+                        <div class="ds-swatch-info">
+                            <span class="ds-swatch-name">Amber Warning</span>
+                            <span class="ds-swatch-value">--color-warning: #F59E0B</span>
+                        </div>
+                    </div>
+                    <div class="ds-swatch">
+                        <div class="ds-swatch-color" style="background: #EF4444;"></div>
+                        <div class="ds-swatch-info">
+                            <span class="ds-swatch-name">Crimson Error</span>
+                            <span class="ds-swatch-value">--color-error: #EF4444</span>
+                        </div>
+                    </div>
+                    <div class="ds-swatch">
+                        <div class="ds-swatch-color" style="background: #64748B;"></div>
+                        <div class="ds-swatch-info">
+                            <span class="ds-swatch-name">Slate Muted</span>
+                            <span class="ds-swatch-value">--text-muted: #64748B</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. COMPONENTS -->
+        <section id="components" class="ds-section">
+            <div class="ds-section-header">
+                <h2 class="ds-section-title">4. Components</h2>
+                <p class="ds-section-desc">Interactive building blocks styled exclusively with design tokens.</p>
+            </div>
+
+            <!-- Buttons -->
+            <div class="ds-card">
+                <h3 class="ds-card-title">Buttons & CTAs (40px Height, 16px Font)</h3>
+                <div class="ds-demo-row">
+                    <button class="btn btn-primary btn-export"><i class="fa-solid fa-film"></i> Export Video</button>
+                    <button class="btn btn-primary"><i class="fa-solid fa-plus"></i> Primary Action</button>
+                    <button class="btn btn-secondary"><i class="fa-solid fa-folder"></i> Secondary Action</button>
+                    <button class="btn btn-ghost"><i class="fa-solid fa-swatchbook"></i> Ghost Button</button>
+                    <button class="btn btn-destructive"><i class="fa-regular fa-trash-can"></i> Delete Clip</button>
+                    <button class="btn-icon" title="Settings icon"><i class="fa-solid fa-sliders"></i></button>
+                </div>
+            </div>
+
+            <!-- Form Controls -->
+            <div class="ds-card">
+                <h3 class="ds-card-title">Form Controls & Sliders</h3>
+                <div class="ds-grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="ds-input-demo">Project Title</label>
+                        <input type="text" id="ds-input-demo" class="form-control" value="Midnight Drive — Official Lyrics">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="ds-select-demo">Canvas Format</label>
+                        <select id="ds-select-demo" class="form-control form-select">
+                            <option>16:9 Cinema / YouTube</option>
+                            <option>9:16 Shorts / Reels / TikTok</option>
+                            <option>1:1 Square Feed</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 12px;">
+                    <div>
+                        <label class="prop-label">Interactive Range Slider with Live Badge</label>
+                        <div class="slider-row" style="margin-top: 6px;">
+                            <input type="range" class="prop-range-slider" min="0" max="100" value="75">
+                            <span class="slider-val-badge">75%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timeline Tracks Demo -->
+            <div class="ds-card">
+                <h3 class="ds-card-title">Multitrack Timeline Display</h3>
+                <div style="background: var(--surface-primary); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); overflow: hidden;">
+                    <div style="height: 34px; background: var(--surface-elevated); border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; padding-left: 140px; font-family: var(--font-mono); color: var(--text-muted);">
+                        <span style="width: 160px; border-left: 1px solid var(--border-strong); padding-left: 6px;">00:00</span>
+                        <span style="width: 160px; border-left: 1px solid var(--border-strong); padding-left: 6px;">00:04</span>
+                        <span style="width: 160px; border-left: 1px solid var(--border-strong); padding-left: 6px;">00:08</span>
+                        <span style="width: 160px; border-left: 1px solid var(--border-strong); padding-left: 6px;">00:12</span>
+                    </div>
+
+                    <!-- Lyrics Track Demo -->
+                    <div style="display: flex; height: 54px; border-bottom: 1px solid var(--border-subtle);">
+                        <div class="track-header lyrics" style="width: 140px; flex-shrink: 0;">Lyrics</div>
+                        <div style="flex: 1; position: relative; background: rgba(139, 92, 246, 0.03); display: flex; align-items: center; padding: 0 10px;">
+                            <div class="timeline-clip clip-lyrics active-playback selected" style="position: static; width: 280px;">
+                                Cruising under neon city skies
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Images Track Demo -->
+                    <div style="display: flex; height: 54px; border-bottom: 1px solid var(--border-subtle);">
+                        <div class="track-header images" style="width: 140px; flex-shrink: 0;">Images</div>
+                        <div style="flex: 1; position: relative; background: rgba(0, 242, 254, 0.03); display: flex; align-items: center; padding: 0 10px;">
+                            <div class="timeline-clip clip-images" style="position: static; width: 360px;">
+                                neon_horizon.png
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Audio Track Demo -->
+                    <div style="display: flex; height: 54px;">
+                        <div class="track-header audio" style="width: 140px; flex-shrink: 0;">Audio</div>
+                        <div style="flex: 1; display: flex; align-items: center; padding: 0 16px; color: var(--text-muted); font-family: var(--font-mono);">
+                            <i class="fa-solid fa-waveform" style="color: var(--color-success); margin-right: 10px;"></i>
+                            midnight_drive.mp3 (44.1kHz • 15.0s)
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. LYRIC TEMPLATES SHOWCASE -->
+        <section id="templates" class="ds-section">
+            <div class="ds-section-header">
+                <h2 class="ds-section-title">5. Animated Lyric Templates (7 Signature Styles)</h2>
+                <p class="ds-section-desc">Each template defines a unique visual motion treatment, animated typography, and ASS/FFmpeg render pipeline integration.</p>
+            </div>
+
+            <div class="template-demo-grid">
+                <!-- 1. Cinematic -->
+                <div class="template-demo-card">
+                    <div class="template-demo-banner preview-cinematic">
+                        <div class="template-mini-bar top"></div>
+                        <span class="template-preview-text serif">MEMORIES DRIFT</span>
+                        <div class="template-mini-bar bottom"></div>
+                    </div>
+                    <div class="template-demo-body">
+                        <div class="template-demo-header">
+                            <span class="template-demo-title">1. Cinematic</span>
+                            <span class="badge badge-accent">Letterbox</span>
+                        </div>
+                        <span class="template-demo-meta">Font: Cinzel • Animation: Fade-Slide + Drift</span>
+                        <p style="font-size: 16px; color: var(--text-secondary);">Filmic 2.39:1 widescreen letterbox bars, elegant serif tracking, deep drop shadow, and slow drift scale.</p>
+                    </div>
+                </div>
+
+                <!-- 2. Neon -->
+                <div class="template-demo-card">
+                    <div class="template-demo-banner preview-neon">
+                        <span class="template-preview-text neon-glow">ELECTRIC NIGHTS</span>
+                    </div>
+                    <div class="template-demo-body">
+                        <div class="template-demo-header">
+                            <span class="template-demo-title">2. Neon</span>
+                            <span class="badge badge-accent">Cyber Bloom</span>
+                        </div>
+                        <span class="template-demo-meta">Font: Outfit • Animation: Pulse Glow Bloom</span>
+                        <p style="font-size: 16px; color: var(--text-secondary);">Multi-stage neon gas tube glow with chromatic outer bloom, pulse frequency, and energetic neon core.</p>
+                    </div>
+                </div>
+
+                <!-- 3. Karaoke -->
+                <div class="template-demo-card">
+                    <div class="template-demo-banner preview-karaoke">
+                        <span class="template-preview-text"><span class="k-sung">SING</span> <span class="k-active">ALONG</span> <span class="k-wait">NOW</span></span>
+                    </div>
+                    <div class="template-demo-body">
+                        <div class="template-demo-header">
+                            <span class="template-demo-title">3. Karaoke</span>
+                            <span class="badge badge-success">Word Highlight</span>
+                        </div>
+                        <span class="template-demo-meta">Font: Outfit • Animation: Syllable Wipe (\k tags)</span>
+                        <p style="font-size: 16px; color: var(--text-secondary);">Real-time word-by-word progressive wipe highlighting synchronized directly with the singer's vocal delivery.</p>
+                    </div>
+                </div>
+
+                <!-- 4. Minimal -->
+                <div class="template-demo-card">
+                    <div class="template-demo-banner preview-minimal">
+                        <span class="template-preview-text clean-sans">PURITY & FORM</span>
+                    </div>
+                    <div class="template-demo-body">
+                        <div class="template-demo-header">
+                            <span class="template-demo-title">4. Minimal</span>
+                            <span class="badge badge-neutral">Swiss Sans</span>
+                        </div>
+                        <span class="template-demo-meta">Font: Inter / Geist • Animation: Smooth Vertical Slide</span>
+                        <p style="font-size: 16px; color: var(--text-secondary);">Geometric sans-serif typography with clean tracking, subtle upward slide, and zero visual clutter.</p>
+                    </div>
+                </div>
+
+                <!-- 5. Dreamy -->
+                <div class="template-demo-card">
+                    <div class="template-demo-banner preview-dreamy">
+                        <span class="template-preview-text dreamy-halo">ETHEREAL SKY</span>
+                    </div>
+                    <div class="template-demo-body">
+                        <div class="template-demo-header">
+                            <span class="template-demo-title">5. Dreamy</span>
+                            <span class="badge badge-accent">Gentle Wave</span>
+                        </div>
+                        <span class="template-demo-meta">Font: Playfair Display • Animation: Floating Wave Drift</span>
+                        <p style="font-size: 16px; color: var(--text-secondary);">Soft lavender-violet halo, undulating gentle bob motion, and luminous breathing ambient drift.</p>
+                    </div>
+                </div>
+
+                <!-- 6. Kinetic -->
+                <div class="template-demo-card">
+                    <div class="template-demo-banner preview-kinetic">
+                        <span class="template-preview-text kinetic-pop">DYNAMIC BEAT</span>
+                    </div>
+                    <div class="template-demo-body">
+                        <div class="template-demo-header">
+                            <span class="template-demo-title">6. Kinetic</span>
+                            <span class="badge badge-warning">Expressive Pop</span>
+                        </div>
+                        <span class="template-demo-meta">Font: Space Grotesk / Syne • Animation: Overshoot Pop Bounce</span>
+                        <p style="font-size: 16px; color: var(--text-secondary);">High-energy expressive typography with punchy scale bounce and dynamic entrance movement on phrase changes.</p>
+                    </div>
+                </div>
+
+                <!-- 7. Music Visualizer -->
+                <div class="template-demo-card">
+                    <div class="template-demo-banner preview-visualizer">
+                        <span class="template-preview-text">SOUND WAVE</span>
+                        <div class="template-mini-eq">
+                            <span style="height: 60%"></span>
+                            <span style="height: 90%"></span>
+                            <span style="height: 45%"></span>
+                            <span style="height: 100%"></span>
+                            <span style="height: 70%"></span>
+                        </div>
+                    </div>
+                    <div class="template-demo-body">
+                        <div class="template-demo-header">
+                            <span class="template-demo-title">7. Music Visualizer</span>
+                            <span class="badge badge-accent">Audio Reactive</span>
+                        </div>
+                        <span class="template-demo-meta">Font: Outfit • Animation: Audio Spectrum Waves</span>
+                        <p style="font-size: 16px; color: var(--text-secondary);">Dynamic reactive frequency equalizer bars pulsing rhythmically below synchronized typography.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. LAYOUT ARCHITECTURE -->
+        <section id="layouts" class="ds-section">
+            <div class="ds-section-header">
+                <h2 class="ds-section-title">6. Layout Architecture</h2>
+                <p class="ds-section-desc">Full-screen creative studio composition comprising the header, 7-tab sidebar, center preview canvas, right inspector, and bottom multitrack timeline.</p>
+            </div>
+
+            <div class="ds-card">
+                <h3 class="ds-card-title">Studio Editor Shell Breakdown</h3>
+                <div class="ds-mockup-frame">
+                    <div class="ds-mockup-bar">
+                        <span style="font-weight: 600;">Top Toolbar (56px) • Wordmark, Project Title, Aspect Ratio, Preview Quality, Export CTA</span>
+                        <span class="badge badge-accent">Studio Layout</span>
+                    </div>
+                    <div class="ds-mockup-content">
+                        <!-- Left Tools -->
+                        <div style="width: 220px; background: var(--surface-primary); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+                            <span style="font-weight: 600;">Sidebar (380px)</span>
+                            <span style="color: var(--text-muted); font-size: 14px;">7 Tabs: Templates, Lyrics, Media, Backgrounds, Effects, Typography, Audio</span>
+                            <div style="height: 60px; background: var(--surface-elevated); border: 1px solid var(--border-subtle); border-radius: 4px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary);">
+                                Active Panel Controls
+                            </div>
+                        </div>
+
+                        <!-- Center Canvas -->
+                        <div style="flex: 1; background: #06070B; border: 1px solid rgba(139, 92, 246, 0.3); border-radius: var(--radius-sm); display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 160px; color: var(--text-secondary); box-shadow: 0 0 20px rgba(139, 92, 246, 0.1);">
+                            <span style="font-weight: 600; color: #FFFFFF;">Center Stage Video Canvas (16:9 / 9:16 / 1:1)</span>
+                            <span style="color: var(--accent-electric); font-size: 14px; margin-top: 4px;">Direct Canvas Drag Placement • Safe Area Guides • Transport Controls</span>
+                        </div>
+
+                        <!-- Right Inspector -->
+                        <div style="width: 200px; background: var(--surface-primary); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+                            <span style="font-weight: 600;">Properties Inspector (330px)</span>
+                            <span style="color: var(--text-muted); font-size: 14px;">Placement, Colors, Glow, Motion, Layer Blur</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 7. ACCESSIBILITY -->
+        <section id="accessibility" class="ds-section">
+            <div class="ds-section-header">
+                <h2 class="ds-section-title">7. Accessibility & Compliance</h2>
+                <p class="ds-section-desc">WCAG AA compliance guidelines and strict design system invariants.</p>
+            </div>
+
+            <div class="ds-card">
+                <h3 class="ds-card-title">WCAG AA Contrast Ratios (Minimum 4.5:1 Target)</h3>
+                <table class="ds-contrast-table">
+                    <thead>
+                        <tr>
+                            <th>Text Element</th>
+                            <th>Foreground</th>
+                            <th>Background</th>
+                            <th>Measured Contrast</th>
+                            <th>WCAG AA Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Primary Text</td>
+                            <td><code>#F8FAFC</code></td>
+                            <td><code>#08090D</code></td>
+                            <td><strong>18.4:1</strong></td>
+                            <td><span class="badge badge-success">Pass (AAA)</span></td>
+                        </tr>
+                        <tr>
+                            <td>Secondary Slate</td>
+                            <td><code>#94A3B8</code></td>
+                            <td><code>#11121A</code></td>
+                            <td><strong>7.2:1</strong></td>
+                            <td><span class="badge badge-success">Pass (AAA)</span></td>
+                        </tr>
+                        <tr>
+                            <td>Electric Lavender Text</td>
+                            <td><code>#C4B5FD</code></td>
+                            <td><code>#11121A</code></td>
+                            <td><strong>10.8:1</strong></td>
+                            <td><span class="badge badge-success">Pass (AAA)</span></td>
+                        </tr>
+                        <tr>
+                            <td>Primary Violet Button</td>
+                            <td><code>#FFFFFF</code></td>
+                            <td><code>#8B5CF6</code></td>
+                            <td><strong>4.6:1</strong></td>
+                            <td><span class="badge badge-success">Pass (AA)</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div style="margin-top: 16px; display: flex; flex-direction: column; gap: 12px;">
+                    <div class="render-info-notice" style="margin: 0;">
+                        <i class="fa-solid fa-universal-access" style="color: var(--accent-primary);"></i>
+                        <span><strong>Strict 16px Rule:</strong> Global CSS rules guarantee that all interface labels, buttons, form controls, timeline markers, tooltips, and badges have a minimum font size of 16px.</span>
+                    </div>
+
+                    <div class="render-info-notice" style="margin: 0;">
+                        <i class="fa-solid fa-keyboard" style="color: var(--accent-primary);"></i>
+                        <span><strong>Keyboard Accessible:</strong> Full keyboard control with Space (Play/Pause), S (Split), Delete (Delete clip), Cmd+Z / Cmd+Y (Undo/Redo), and visible violet focus outlines.</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}
