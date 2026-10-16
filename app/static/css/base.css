@@ -5,31 +5,32 @@
    ========================================================================== */
 
 :root {
-    /* --- Vibe-Coded Color Palette Tokens --- */
-    --bg-app: #08090D;                /* Deepest near-black workspace */
-    --surface-primary: #11121A;       /* Charcoal panel base */
-    --surface-elevated: #161824;      /* Elevated floating cards and bars */
-    --surface-hover: #1E2030;         /* Micro-interaction hover */
-    --surface-active: #26293D;        /* Active / pressed state */
-    --surface-glass: rgba(17, 18, 26, 0.85); /* Frosted glass */
+    /* --- Art Direction: Cinematic & Creative Coding Tokens --- */
+    --bg-app: #090909;                /* Deepest near-black void */
+    --bg-stage: #101010;              /* Composition stage backdrop */
+    --surface-primary: #171717;       /* Layered charcoal surface */
+    --surface-elevated: #202020;      /* Elevated bars, tool drawers & inspector */
+    --surface-hover: #262626;         /* Hover state */
+    --surface-active: #2E2E2E;        /* Active / pressed state */
+    --surface-glass: rgba(23, 23, 23, 0.88); /* Subtle frosted charcoal */
 
-    --text-primary: #F8FAFC;          /* High-clarity crisp white */
-    --text-secondary: #94A3B8;        /* Soft lavender-slate */
-    --text-muted: #64748B;            /* Subtle guidance labels */
+    --text-primary: #F1EFEA;          /* Warm white primary text */
+    --text-secondary: #A09EA9;        /* Muted secondary text with accessible contrast */
+    --text-muted: #8E8C99;            /* Subtle guidance labels */
 
-    --border-subtle: rgba(255, 255, 255, 0.08); /* Filmic thin lines */
-    --border-strong: rgba(255, 255, 255, 0.16);
-    --border-glow: rgba(139, 92, 246, 0.4);
+    --border-subtle: #262626;         /* Fine separators */
+    --border-strong: #333333;         /* Structural borders */
+    --border-glow: rgba(169, 148, 255, 0.35);
 
-    /* Electric Lavender & Violet Accents */
-    --accent-primary: #8B5CF6;        /* Vivid violet */
-    --accent-primary-hover: #A78BFA;  /* Electric lavender highlight */
-    --accent-primary-active: #7C3AED; /* Deep rich violet */
-    --accent-electric: #C4B5FD;       /* Soft glowing lavender text */
-    --accent-cyan: #06B6D4;           /* Secondary neon punch */
-    --accent-subtle: rgba(139, 92, 246, 0.14);
-    --accent-border: rgba(139, 92, 246, 0.32);
-    --accent-glow: 0 0 24px rgba(139, 92, 246, 0.35);
+    /* Restrained Lavender & Violet Accents (Not overused) */
+    --accent-primary: #A994FF;        /* Restrained lavender accent */
+    --accent-primary-hover: #BEB0FF;  /* Lighter lavender highlight */
+    --accent-primary-active: #8E74FC; /* Deep lavender */
+    --accent-electric: #D4CBFF;       /* Soft glowing lavender text */
+    --accent-cyan: #38BDF8;           /* Subtle secondary cyan */
+    --accent-subtle: rgba(169, 148, 255, 0.12);
+    --accent-border: rgba(169, 148, 255, 0.28);
+    --accent-glow: 0 0 20px rgba(169, 148, 255, 0.25);
 
     /* Semantic Feedback */
     --color-success: #10B981;
@@ -76,6 +77,7 @@
     /* --- Typography Scale (MINIMUM 16px) --- */
     --font-sans: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --font-heading: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-serif: 'Playfair Display', 'Cormorant Garamond', 'Fraunces', 'Cinzel', serif;
     --font-mono: 'Geist Mono', 'JetBrains Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
     --font-size-base: 16px;  /* Minimum size for all interface text */

@@ -1,7 +1,8 @@
 /**
- * LyricStudio Live Composition Preview Engine
- * Renders multi-layer canvas matching the video export pipeline.
- * Supports direct canvas dragging, safe areas, all 7 templates, and real-time playback.
+ * LyricStudio Cinematic Composition Preview Engine
+ * Author: LyricStudio Engineering
+ * Renders real-time multi-layer canvas matching the FFmpeg export pipeline.
+ * Direct canvas manipulation, safe-area guides, alignment snapping, all 7 templates, and real-time playback.
  */
 class PreviewEngine {
     constructor(canvasId, audioId) {
@@ -22,10 +23,15 @@ class PreviewEngine {
 
         this.isPlaying = false;
         this.currentTime = 0.0;
-        this.duration = 0.0;
+        this.duration = 30.0;
 
         this._animationFrame = null;
         this.isDraggingCanvas = false;
+        this.isResizingText = false;
+        this.selectedLayer = 'lyric'; // 'lyric', 'background', 'composition'
+        this.snapGuideX = null;
+        this.snapGuideY = null;
+        this.textBounds = null;
 
         this.setupAudioListeners();
         this.setupCanvasInteractions();
@@ -39,6 +45,12 @@ class PreviewEngine {
         } else if (aspectRatio === '1:1') {
             this.width = 1080;
             this.height = 1080;
+        } else if (aspectRatio === '4:5') {
+            this.width = 1080;
+            this.height = 1350;
+        } else if (aspectRatio === '2.39:1') {
+            this.width = 2560;
+            this.height = 1072;
         } else {
             this.width = 1920;
             this.height = 1080;
@@ -65,7 +77,7 @@ class PreviewEngine {
         this.lyrics = project.lyrics_data || [];
         this.setDimensions(project.aspect_ratio || '16:9');
 
-        // Preload image assets
+        // Preload image assets into cache
         if (project.assets) {
             project.assets.forEach(a => {
                 if (a.asset_type === 'image' && !this.imageCache.has(a.id)) {
@@ -141,51 +153,137 @@ class PreviewEngine {
     setupCanvasInteractions() {
         if (!this.canvas) return;
 
-        const updatePositionFromEvent = (e) => {
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let initialPosX = 50;
+        let initialPosY = 78;
+        let initialFontSize = 48;
+
+        const getCanvasCoords = (e) => {
             const rect = this.canvas.getBoundingClientRect();
             const clientX = e.clientX || (e.touches && e.touches[0].clientX);
             const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+            const scaleX = this.width / rect.width;
+            const scaleY = this.height / rect.height;
+            return {
+                x: (clientX - rect.left) * scaleX,
+                y: (clientY - rect.top) * scaleY,
+                relX: (clientX - rect.left) / rect.width,
+                relY: (clientY - rect.top) / rect.height
+            };
+        };
 
-            const relX = (clientX - rect.left) / rect.width;
-            const relY = (clientY - rect.top) / rect.height;
-
-            const posY = Math.max(15, Math.min(92, Math.round(relY * 100)));
-            const posX = Math.max(10, Math.min(90, Math.round(relX * 100)));
-
-            this.templateConfig.position_y = posY;
-            this.templateConfig.position_x = posX;
-
-            // Sync with Inspector inputs
-            const ySlider = document.getElementById('prop-position-y');
-            const yBadge = document.getElementById('posy-val-badge');
-            if (ySlider) ySlider.value = posY;
-            if (yBadge) yBadge.textContent = `${posY}%`;
-
-            const xSlider = document.getElementById('prop-position-x');
-            const xBadge = document.getElementById('posx-val-badge');
-            if (xSlider) xSlider.value = posX;
-            if (xBadge) xBadge.textContent = `${posX}%`;
-
-            this.renderFrame();
+        const isPointInHandle = (ptX, ptY, hX, hY, radius = 18) => {
+            return Math.abs(ptX - hX) <= radius && Math.abs(ptY - hY) <= radius;
         };
 
         this.canvas.addEventListener('mousedown', (e) => {
-            this.isDraggingCanvas = true;
-            this.canvas.style.cursor = 'grabbing';
-            updatePositionFromEvent(e);
+            const coords = getCanvasCoords(e);
+            initialPosX = this.templateConfig.position_x !== undefined ? this.templateConfig.position_x : 50;
+            initialPosY = this.templateConfig.position_y !== undefined ? this.templateConfig.position_y : 78;
+            initialFontSize = this.templateConfig.font_size || 48;
+            dragStartX = coords.x;
+            dragStartY = coords.y;
+
+            // Check if user clicked on bottom-right resize handle
+            if (this.textBounds) {
+                const brX = this.textBounds.x + this.textBounds.w;
+                const brY = this.textBounds.y + this.textBounds.h;
+                if (isPointInHandle(coords.x, coords.y, brX, brY, 24)) {
+                    this.isResizingText = true;
+                    this.canvas.style.cursor = 'nwse-resize';
+                    return;
+                }
+            }
+
+            // Check if user clicked inside text box
+            const textY = this.height * (initialPosY / 100);
+            const textX = this.width * (initialPosX / 100);
+            const approxHalfW = (this.textBounds ? this.textBounds.w / 2 : this.width * 0.35);
+            const approxHalfH = (this.textBounds ? this.textBounds.h / 2 : 40);
+
+            if (Math.abs(coords.x - textX) <= approxHalfW + 20 && Math.abs(coords.y - textY) <= approxHalfH + 20) {
+                this.isDraggingCanvas = true;
+                this.selectedLayer = 'lyric';
+                this.canvas.style.cursor = 'grabbing';
+                if (window.Editor && window.Editor.switchInspectorTab) {
+                    window.Editor.switchInspectorTab('layer');
+                }
+            } else {
+                // Clicked outside text: select background layer
+                this.selectedLayer = 'background';
+                if (window.Editor && window.Editor.switchInspectorTab) {
+                    window.Editor.switchInspectorTab('background');
+                }
+            }
+            this.renderFrame();
         });
 
         window.addEventListener('mousemove', (e) => {
+            if (!this.isDraggingCanvas && !this.isResizingText) return;
+            const coords = getCanvasCoords(e);
+
+            if (this.isResizingText) {
+                const deltaX = coords.x - dragStartX;
+                const newSize = Math.max(20, Math.min(130, Math.round(initialFontSize + (deltaX * 0.12))));
+                this.templateConfig.font_size = newSize;
+                const sizeInput = document.getElementById('prop-font-size');
+                const sizeSlider = document.getElementById('prop-font-size-slider');
+                if (sizeInput) sizeInput.value = newSize;
+                if (sizeSlider) sizeSlider.value = newSize;
+                this.renderFrame();
+                return;
+            }
+
             if (this.isDraggingCanvas) {
-                updatePositionFromEvent(e);
+                let newX = Math.round(coords.relX * 100);
+                let newY = Math.round(coords.relY * 100);
+
+                // Magnetic Center Snapping (within 2.5% of center)
+                if (Math.abs(newX - 50) <= 2.5) {
+                    newX = 50;
+                    this.snapGuideX = this.width / 2;
+                } else {
+                    this.snapGuideX = null;
+                }
+
+                if (Math.abs(newY - 50) <= 2.5) {
+                    newY = 50;
+                    this.snapGuideY = this.height / 2;
+                } else {
+                    this.snapGuideY = null;
+                }
+
+                newX = Math.max(10, Math.min(90, newX));
+                newY = Math.max(15, Math.min(92, newY));
+
+                this.templateConfig.position_x = newX;
+                this.templateConfig.position_y = newY;
+
+                // Sync Inspector Position Sliders
+                const xSlider = document.getElementById('prop-position-x');
+                const xBadge = document.getElementById('posx-val-badge');
+                if (xSlider) xSlider.value = newX;
+                if (xBadge) xBadge.textContent = `${newX}%`;
+
+                const ySlider = document.getElementById('prop-position-y');
+                const yBadge = document.getElementById('posy-val-badge');
+                if (ySlider) ySlider.value = newY;
+                if (yBadge) yBadge.textContent = `${newY}%`;
+
+                this.renderFrame();
             }
         });
 
         window.addEventListener('mouseup', () => {
-            if (this.isDraggingCanvas) {
+            if (this.isDraggingCanvas || this.isResizingText) {
                 this.isDraggingCanvas = false;
+                this.isResizingText = false;
+                this.snapGuideX = null;
+                this.snapGuideY = null;
                 if (this.canvas) this.canvas.style.cursor = 'crosshair';
                 if (window.Editor) window.Editor.triggerAutosave();
+                this.renderFrame();
             }
         });
     }
@@ -218,7 +316,7 @@ class PreviewEngine {
             btn.classList.toggle('active', this.showSafeArea);
         }
         this.renderFrame();
-        showToast(`Safe area guides ${this.showSafeArea ? 'enabled' : 'hidden'}`, 'info');
+        showToast(`Safe area guides ${this.showSafeArea ? 'shown' : 'hidden'}`, 'info');
     }
 
     toggleLoop() {
@@ -270,17 +368,18 @@ class PreviewEngine {
         const cfg = this.templateConfig;
 
         // 1. Solid Canvas Background
-        ctx.fillStyle = cfg.background_color || '#08090D';
+        ctx.fillStyle = cfg.background_color || '#090909';
         ctx.fillRect(0, 0, w, h);
 
-        // 2. Active Image Layer (Ken Burns slow zoom/pan + blur)
+        // 2. Active Background Image Layer with Fit / Pan / Zoom / Blur / Rotation
         const activeImageClip = this.getActiveImageClip(this.currentTime);
         if (activeImageClip && this.imageCache.has(activeImageClip.asset_id)) {
             const img = this.imageCache.get(activeImageClip.asset_id);
             if (img && img.complete) {
                 ctx.save();
                 const clipProgress = (this.currentTime - activeImageClip.start) / Math.max(0.1, (activeImageClip.end - activeImageClip.start));
-                
+
+                // Ken Burns Motion
                 let zoom = 1.0;
                 const motion = cfg.bg_zoom || 'zoom-in';
                 if (motion === 'zoom-in') {
@@ -289,7 +388,12 @@ class PreviewEngine {
                     zoom = 1.08 - (clipProgress * 0.08);
                 }
 
-                ctx.translate(w / 2, h / 2);
+                const panX = (cfg.bg_pan_x || 0) * (w / 100);
+                const panY = (cfg.bg_pan_y || 0) * (h / 100);
+                const rotDeg = (cfg.bg_rotation || 0) * (Math.PI / 180);
+
+                ctx.translate(w / 2 + panX, h / 2 + panY);
+                ctx.rotate(rotDeg);
                 ctx.scale(zoom, zoom);
                 ctx.globalAlpha = activeImageClip.opacity !== undefined ? activeImageClip.opacity : 1.0;
 
@@ -298,23 +402,41 @@ class PreviewEngine {
                     ctx.filter = `blur(${cfg.bg_blur}px)`;
                 }
 
+                const fitMode = cfg.bg_fit || 'cover';
+                let drawW = w;
+                let drawH = h;
                 const imgRatio = img.width / img.height;
                 const canvasRatio = w / h;
-                let drawW, drawH;
-                if (imgRatio > canvasRatio) {
-                    drawH = h;
-                    drawW = h * imgRatio;
+
+                if (fitMode === 'cover') {
+                    if (imgRatio > canvasRatio) {
+                        drawH = h;
+                        drawW = h * imgRatio;
+                    } else {
+                        drawW = w;
+                        drawH = w / imgRatio;
+                    }
+                } else if (fitMode === 'contain') {
+                    if (imgRatio > canvasRatio) {
+                        drawW = w;
+                        drawH = w / imgRatio;
+                    } else {
+                        drawH = h;
+                        drawW = h * imgRatio;
+                    }
                 } else {
+                    // fill exact
                     drawW = w;
-                    drawH = w / imgRatio;
+                    drawH = h;
                 }
+
                 ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
                 ctx.restore();
 
-                // Darken overlay
+                // Dimming overlay
                 const op = cfg.overlay_opacity !== undefined ? cfg.overlay_opacity : 0.4;
                 if (op > 0) {
-                    ctx.fillStyle = `rgba(0, 0, 0, ${op})`;
+                    ctx.fillStyle = `rgba(9, 9, 9, ${op})`;
                     ctx.fillRect(0, 0, w, h);
                 }
             }
@@ -333,8 +455,8 @@ class PreviewEngine {
                 const barH = Math.max(4, Math.abs(freq) * (h * 0.16));
 
                 const grad = ctx.createLinearGradient(0, baseY, 0, baseY - barH);
-                grad.addColorStop(0, cfg.visualizer_color || '#8B5CF6');
-                grad.addColorStop(1, '#A78BFA');
+                grad.addColorStop(0, cfg.visualizer_color || '#A994FF');
+                grad.addColorStop(1, '#D4CBFF');
 
                 ctx.fillStyle = grad;
                 ctx.fillRect(startX + i * barW + 2, baseY - barH, barW - 4, barH);
@@ -342,8 +464,8 @@ class PreviewEngine {
             ctx.restore();
         }
 
-        // 4. Cinematic Letterbox Bars
-        if (cfg.template_id === 'cinematic' || cfg.show_letterbox) {
+        // 4. Letterbox Bars (if Midnight Cinema or effect enabled)
+        if (cfg.template_id === 'midnight_cinema' || cfg.template_id === 'cinematic' || cfg.show_letterbox) {
             const barH = h * 0.08;
             ctx.fillStyle = '#000000';
             ctx.fillRect(0, 0, w, barH);
@@ -356,8 +478,8 @@ class PreviewEngine {
             const lineDuration = Math.max(0.1, activeLine.end - activeLine.start);
             const lineProgress = Math.max(0, Math.min(1, (this.currentTime - activeLine.start) / lineDuration));
 
-            const templateId = cfg.template_id || 'cinematic';
-            const template = TEMPLATES[templateId] || TEMPLATES.cinematic;
+            const templateId = cfg.template_id || 'midnight_cinema';
+            const template = TEMPLATES[templateId] || TEMPLATES.midnight_cinema || TEMPLATES.cinematic;
 
             template.render(
                 ctx,
@@ -371,27 +493,102 @@ class PreviewEngine {
                 activeLine.start,
                 activeLine.end
             );
+
+            // Record text bounding box for direct canvas manipulation
+            const posX = w * ((cfg.position_x !== undefined ? cfg.position_x : 50) / 100);
+            const posY = h * ((cfg.position_y !== undefined ? cfg.position_y : 78) / 100);
+            const fontSize = (cfg.font_size || 48) * (h / 1080);
+            ctx.font = `${cfg.font_weight || '700'} ${fontSize}px ${cfg.font_family || "'Cinzel', serif"}`;
+            const metrics = ctx.measureText(activeLine.text);
+            const boxW = metrics.width + 40;
+            const boxH = fontSize * 1.6;
+            this.textBounds = {
+                x: posX - boxW / 2,
+                y: posY - boxH / 2,
+                w: boxW,
+                h: boxH
+            };
+
+            // Draw direct manipulation selection handles when selected
+            if (this.selectedLayer === 'lyric') {
+                ctx.save();
+                ctx.strokeStyle = 'rgba(169, 148, 255, 0.7)';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([6, 6]);
+                ctx.strokeRect(this.textBounds.x, this.textBounds.y, this.textBounds.w, this.textBounds.h);
+
+                // Corner resize handle (bottom-right)
+                ctx.setLineDash([]);
+                ctx.fillStyle = '#A994FF';
+                const brX = this.textBounds.x + this.textBounds.w;
+                const brY = this.textBounds.y + this.textBounds.h;
+                ctx.beginPath();
+                ctx.arc(brX, brY, 6, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Center position anchor dot
+                ctx.fillStyle = 'rgba(241, 239, 234, 0.9)';
+                ctx.beginPath();
+                ctx.arc(posX, posY, 4, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+        } else {
+            this.textBounds = null;
         }
 
-        // 6. Safe Area Guides (Action 90% and Title 80%)
+        // 6. Magnetic Snap Guide Lines
+        if (this.snapGuideX !== null) {
+            ctx.save();
+            ctx.strokeStyle = '#A994FF';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(this.snapGuideX, 0);
+            ctx.lineTo(this.snapGuideX, h);
+            ctx.stroke();
+            ctx.restore();
+        }
+        if (this.snapGuideY !== null) {
+            ctx.save();
+            ctx.strokeStyle = '#A994FF';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(0, this.snapGuideY);
+            ctx.lineTo(w, this.snapGuideY);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // 7. Safe Area Guides (Action 90% and Title 80%)
         if (this.showSafeArea) {
             ctx.save();
             // 90% Action Safe
-            ctx.strokeStyle = 'rgba(139, 92, 246, 0.4)';
+            ctx.strokeStyle = 'rgba(169, 148, 255, 0.45)';
             ctx.lineWidth = 2;
             ctx.setLineDash([8, 8]);
             ctx.strokeRect(w * 0.05, h * 0.05, w * 0.9, h * 0.9);
 
             // 80% Title Safe
-            ctx.strokeStyle = 'rgba(0, 242, 254, 0.5)';
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.55)';
             ctx.strokeRect(w * 0.1, h * 0.1, w * 0.8, h * 0.8);
 
+            // Center Crosshair
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(w / 2 - 20, h / 2);
+            ctx.lineTo(w / 2 + 20, h / 2);
+            ctx.moveTo(w / 2, h / 2 - 20);
+            ctx.lineTo(w / 2, h / 2 + 20);
+            ctx.stroke();
+
             // Labels
-            ctx.font = '500 18px "Inter", sans-serif';
-            ctx.fillStyle = 'rgba(0, 242, 254, 0.7)';
-            ctx.fillText('80% Title Safe Area', w * 0.1 + 8, h * 0.1 + 24);
-            ctx.fillStyle = 'rgba(139, 92, 246, 0.7)';
-            ctx.fillText('90% Action Safe', w * 0.05 + 8, h * 0.05 + 24);
+            ctx.font = '500 18px "Geist", "Inter", sans-serif';
+            ctx.fillStyle = 'rgba(56, 189, 248, 0.75)';
+            ctx.fillText('80% Title Safe Area', w * 0.1 + 10, h * 0.1 + 24);
+            ctx.fillStyle = 'rgba(169, 148, 255, 0.75)';
+            ctx.fillText('90% Action Safe Area', w * 0.05 + 10, h * 0.05 + 24);
 
             ctx.restore();
         }

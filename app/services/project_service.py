@@ -9,34 +9,43 @@ from config import Config
 logger = logging.getLogger(__name__)
 
 DEFAULT_TEMPLATE_CONFIG = {
-    "template_id": "cinematic",  # cinematic, neon, minimal, karaoke, aesthetic, visualizer
-    "font_family": "'Inter', 'Cinzel', sans-serif",
+    "template_id": "midnight_cinema",  # midnight_cinema, soft_focus, editorial_serif, kinetic_type, dream_sequence, minimal_verse, karaoke_highlight
+    "font_family": "'Cinzel', 'Playfair Display', serif",
     "font_size": 48,
     "font_weight": "700",
-    "letter_spacing": 2.0,
-    "text_color": "#FFFFFF",
-    "secondary_color": "#FFD700",
-    "highlight_color": "#00F2FE",
-    "outline_color": "#000000",
+    "letter_spacing": 3.0,
+    "line_height": 1.3,
+    "text_color": "#F1EFEA",
+    "secondary_color": "#A09EA9",
+    "highlight_color": "#A994FF",
+    "outline_color": "#090909",
     "outline_width": 2,
-    "shadow_color": "rgba(0, 0, 0, 0.75)",
-    "shadow_blur": 15,
-    "glow_color": "rgba(0, 242, 254, 0.8)",
+    "shadow_color": "rgba(0, 0, 0, 0.85)",
+    "shadow_blur": 16,
+    "glow_color": "rgba(169, 148, 255, 0.4)",
     "glow_size": 20,
     "text_align": "center",
     "position_y": 78,  # percentage from top
     "position_x": 50,  # percentage from left
-    "animation_type": "fade-slide",  # fade, slide, scale, typewriter, karaoke
-    "animation_duration": 0.5,
+    "animation_type": "cinematic-rise",  # fade-darkness, blur-focus, cinematic-rise, tracking-reveal, typewriter, word-highlight, scale-drift, beat-pulse
+    "animation_duration": 0.45,
     "animation_delay": 0.0,
-    "animation_easing": "cubic-bezier(0.25, 1, 0.5, 1)",
-    "background_color": "#0A0B10",
-    "background_gradient": "linear-gradient(180deg, #0A0B10 0%, #151824 100%)",
+    "animation_easing": "cubic-bezier(0.16, 1, 0.3, 1)",
+    "animation_direction": "up",
+    "animation_intensity": "medium",
+    "beat_pulse": True,
+    "background_color": "#090909",
     "overlay_opacity": 0.4,
     "bg_blur": 0,
     "bg_zoom": "zoom-in",
-    "visualizer_style": "bars",  # bars, wave, circle
-    "visualizer_color": "#4FACFE"
+    "bg_fit": "cover",
+    "bg_pan_x": 0,
+    "bg_pan_y": 0,
+    "bg_rotation": 0,
+    "show_letterbox": True,
+    "show_visualizer": False,
+    "visualizer_style": "bars",
+    "visualizer_color": "#A994FF"
 }
 
 DEFAULT_TIMELINE_CONFIG = {

@@ -1,6 +1,6 @@
 /* ==========================================================================
    LyricStudio Multitrack Interactive Timeline Stylesheet
-   Vibe-coded timeline with distinct audio, image, and lyrics tracks.
+   Art Direction: Layered charcoal surfaces, fine dividers, and lavender accents.
    STRICT RULE: The minimum font size anywhere is 16px. No text below 16px.
    ========================================================================== */
 
@@ -13,13 +13,38 @@
     z-index: 40;
     flex-shrink: 0;
     user-select: none;
+    position: relative;
+    transition: height 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.editor-timeline.collapsed {
+    height: 48px !important;
+}
+.editor-timeline.collapsed .timeline-body {
+    display: none !important;
+}
+
+/* Vertical Height Drag Resizer */
+.timeline-resizer {
+    position: absolute;
+    top: -3px;
+    left: 0;
+    right: 0;
+    height: 6px;
+    cursor: ns-resize;
+    z-index: 50;
+    background: transparent;
+    transition: background-color 0.15s ease;
+}
+.timeline-resizer:hover {
+    background: var(--accent-primary);
 }
 
 /* ==========================================================================
    Timeline Toolbar
    ========================================================================== */
 .timeline-toolbar {
-    height: 46px;
+    height: 48px;
     background: var(--surface-primary);
     border-bottom: 1px solid var(--border-subtle);
     display: flex;
@@ -37,16 +62,16 @@
 }
 
 .btn-sm {
-    height: 32px;
-    padding: 0 10px;
-    font-size: var(--font-size-base);
+    height: 36px;
+    padding: 0 12px;
+    font-size: 16px;
     gap: 6px;
 }
 
 .timeline-tools-left .btn.active {
     background: var(--accent-subtle);
     border-color: var(--accent-border);
-    color: var(--accent-electric);
+    color: var(--accent-primary);
 }
 
 .timeline-zoom-control {
@@ -56,9 +81,10 @@
 }
 
 .btn-zoom-step {
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
     color: var(--text-secondary);
+    font-size: 16px;
 }
 .btn-zoom-step:hover {
     color: var(--text-primary);
@@ -95,7 +121,7 @@
 }
 
 .timeline-headers-top {
-    height: 34px;
+    height: 36px;
     background: var(--surface-elevated);
     border-bottom: 1px solid var(--border-subtle);
     display: flex;
@@ -103,9 +129,9 @@
     padding: 0 12px;
 }
 .track-headers-label {
-    font-size: 13px;
-    letter-spacing: 0.1em;
-    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: 0.05em;
+    font-weight: 600;
     color: var(--text-muted);
 }
 
@@ -116,8 +142,8 @@
     justify-content: space-between;
     padding: 0 var(--space-3);
     border-bottom: 1px solid var(--border-subtle);
-    font-size: var(--font-size-base);
-    font-weight: var(--font-weight-medium);
+    font-size: 16px;
+    font-weight: 500;
     color: var(--text-secondary);
     background: var(--surface-primary);
     transition: background 0.15s ease;
@@ -130,7 +156,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: var(--font-size-base);
+    font-size: 16px;
     font-weight: 600;
 }
 
@@ -138,14 +164,14 @@
     border-left: 3px solid var(--accent-primary);
 }
 .track-header.lyrics .track-header-title i {
-    color: var(--accent-primary-hover);
+    color: var(--accent-primary);
 }
 
 .track-header.images {
-    border-left: 3px solid #00F2FE;
+    border-left: 3px solid var(--accent-cyan);
 }
 .track-header.images .track-header-title i {
-    color: #00F2FE;
+    color: var(--accent-cyan);
 }
 
 .track-header.audio {
@@ -163,7 +189,7 @@
     overflow-x: auto;
     overflow-y: hidden;
     position: relative;
-    background: #090A10;
+    background: #090909;
 }
 
 .timeline-tracks-wrapper {
@@ -176,7 +202,7 @@
 
 /* Time Ruler */
 .timeline-ruler {
-    height: 34px;
+    height: 36px;
     background: var(--surface-elevated);
     border-bottom: 1px solid var(--border-subtle);
     position: relative;
@@ -189,10 +215,10 @@
     height: 100%;
     border-left: 1px solid var(--border-strong);
     font-family: var(--font-mono);
-    font-size: var(--font-size-base);
+    font-size: 16px;
     color: var(--text-muted);
     padding-left: 6px;
-    line-height: 34px;
+    line-height: 36px;
     pointer-events: none;
     user-select: none;
 }
@@ -206,10 +232,10 @@
 }
 
 .lane-lyrics {
-    background: rgba(139, 92, 246, 0.02);
+    background: rgba(169, 148, 255, 0.02);
 }
 .lane-images {
-    background: rgba(0, 242, 254, 0.02);
+    background: rgba(56, 189, 248, 0.02);
 }
 .lane-audio {
     background: rgba(16, 185, 129, 0.02);
@@ -234,7 +260,7 @@
     display: flex;
     align-items: center;
     padding: 0 10px;
-    font-size: var(--font-size-base);
+    font-size: 16px;
     font-weight: 500;
     cursor: grab;
     overflow: hidden;
@@ -248,31 +274,31 @@
     cursor: grabbing;
 }
 
-/* Lyric Clips (Electric Violet) */
+/* Lyric Clips (Restrained Lavender) */
 .clip-lyrics {
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.28) 0%, rgba(109, 40, 217, 0.38) 100%);
-    border-color: rgba(167, 139, 250, 0.4);
-    color: #FFFFFF;
+    background: rgba(169, 148, 255, 0.22);
+    border-color: rgba(169, 148, 255, 0.45);
+    color: var(--text-primary);
 }
 .clip-lyrics:hover {
-    border-color: rgba(196, 181, 253, 0.8);
-    box-shadow: 0 0 10px rgba(139, 92, 246, 0.35);
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 10px rgba(169, 148, 255, 0.3);
 }
 .clip-lyrics.active-playback {
-    border-color: #C4B5FD;
-    background: linear-gradient(135deg, rgba(167, 139, 250, 0.45) 0%, rgba(139, 92, 246, 0.55) 100%);
-    box-shadow: 0 0 16px rgba(167, 139, 250, 0.6);
+    border-color: var(--accent-primary-hover);
+    background: rgba(169, 148, 255, 0.38);
+    box-shadow: 0 0 14px rgba(169, 148, 255, 0.5);
 }
 
-/* Image Clips (Electric Cyan) */
+/* Image Clips (Cyan) */
 .clip-images {
-    background: linear-gradient(135deg, rgba(6, 182, 212, 0.25) 0%, rgba(14, 116, 144, 0.35) 100%);
-    border-color: rgba(6, 182, 212, 0.45);
+    background: rgba(56, 189, 248, 0.2);
+    border-color: rgba(56, 189, 248, 0.45);
     color: #E0F2FE;
 }
 .clip-images:hover {
-    border-color: #38BDF8;
-    box-shadow: 0 0 10px rgba(6, 182, 212, 0.35);
+    border-color: var(--accent-cyan);
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
 }
 
 /* Selected State */
@@ -306,7 +332,7 @@
 
 .timeline-clip:hover .clip-handle-l,
 .timeline-clip:hover .clip-handle-r {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.25);
 }
 .clip-handle-l:hover, .clip-handle-r:hover {
     background: #FFFFFF !important;
@@ -324,7 +350,7 @@
     pointer-events: none;
     z-index: 25;
     transform: translateX(-1px);
-    box-shadow: 0 0 8px rgba(255, 255, 255, 0.8), 0 0 14px rgba(139, 92, 246, 0.8);
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.8), 0 0 12px rgba(169, 148, 255, 0.7);
 }
 
 .playhead-head {

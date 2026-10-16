@@ -86,9 +86,11 @@ def init_db(app=None):
     cursor.execute("PRAGMA table_info(users);")
     existing_columns = {row[1] for row in cursor.fetchall()}
     if "email" not in existing_columns:
-        cursor.execute("ALTER TABLE users ADD COLUMN email TEXT UNIQUE;")
+        cursor.execute("ALTER TABLE users ADD COLUMN email TEXT;")
+        cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email);")
     if "supabase_uid" not in existing_columns:
-        cursor.execute("ALTER TABLE users ADD COLUMN supabase_uid TEXT UNIQUE;")
+        cursor.execute("ALTER TABLE users ADD COLUMN supabase_uid TEXT;")
+        cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_supabase_uid ON users(supabase_uid);")
     if "role" not in existing_columns:
         cursor.execute("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user';")
 

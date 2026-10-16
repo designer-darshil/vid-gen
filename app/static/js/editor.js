@@ -1,11 +1,14 @@
 /**
  * LyricStudio Main Editor Application Controller
- * Handles panels, templates, live inspector syncing, media uploads, and export rendering.
+ * Orchestrates creative tool rail, drawer, canvas preview, contextual inspector, and timeline.
+ * Author: LyricStudio Engineering
  */
 const Editor = {
     project: null,
     autosaveTimer: null,
     renderPollTimer: null,
+    activeDrawerTab: 'drawer-media',
+    isDrawerOpen: true,
 
     init(projectData) {
         this.project = projectData;
@@ -19,7 +22,7 @@ const Editor = {
 
         SyncUI.init(this.project);
 
-        this.setupSidebarTabs();
+        this.setupCreativeRail();
         this.setupInspectorBindings();
         this.setupTemplateSelection();
         this.setupMediaUploads();
@@ -27,41 +30,170 @@ const Editor = {
         this.setupKeyboardShortcuts();
     },
 
+    setupCreativeRail() {
+        const railButtons = document.querySelectorAll('.rail-btn');
+        const drawer = document.getElementById('rail-drawer');
+        const drawerTitle = document.getElementById('drawer-title');
+
+        railButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const target = btn.getAttribute('data-target');
+                const titleText = btn.querySelector('span')?.textContent || 'Creative Panel';
+
+                if (this.activeDrawerTab === target && this.isDrawerOpen) {
+                    // Clicking active button toggles/collapses drawer
+                    this.toggleDrawer(false);
+                    return;
+                }
+
+                railButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                document.querySelectorAll('.drawer-panel').forEach(p => p.classList.remove('active'));
+                const panel = document.getElementById(target);
+                if (panel) panel.classList.add('active');
+
+                if (drawerTitle) drawerTitle.textContent = titleText;
+                this.activeDrawerTab = target;
+                this.toggleDrawer(true);
+            });
+        });
+    },
+
+    toggleDrawer(open) {
+        const drawer = document.getElementById('rail-drawer');
+        if (!drawer) return;
+        this.isDrawerOpen = open;
+        drawer.classList.toggle('collapsed', !open);
+
+        if (!open) {
+            document.querySelectorAll('.rail-btn').forEach(b => b.classList.remove('active'));
+        } else {
+            const currentBtn = document.querySelector(`.rail-btn[data-target="${this.activeDrawerTab}"]`);
+            if (currentBtn) currentBtn.classList.add('active');
+        }
+    },
+
+    switchInspectorTab(tabId) {
+        document.querySelectorAll('.inspector-tab').forEach(t => {
+            t.classList.toggle('active', t.getAttribute('data-tab') === tabId);
+        });
+        document.querySelectorAll('.inspector-tab-panel').forEach(p => {
+            p.classList.toggle('active', p.id === `itab-${tabId}`);
+        });
+    },
+
+    setupTemplateSelection() {
+        const currentId = (this.project.template_data && this.project.template_data.template_id) || 'midnight_cinema';
+        document.querySelectorAll('.template-card').forEach(card => {
+            const cardId = card.getAttribute('data-template-id');
+            if (cardId === currentId || (cardId === 'midnight_cinema' && currentId === 'cinematic')) {
+                card.classList.add('active');
+            }
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.template-card').forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+
+                const tId = card.getAttribute('data-template-id');
+                const tObj = TEMPLATES[tId];
+                if (tObj) {
+                    this.project.template_data = { ...this.project.template_data, ...tObj.defaults, template_id: tId };
+                    window.Preview.templateConfig = this.project.template_data;
+                    this.populateInspectorInputs();
+                    window.Preview.renderFrame();
+                    this.triggerAutosave();
+                    showToast(`Applied "${tObj.name}" signature template`, 'success');
+                }
+            });
+        });
+    },
+
+    setMotionPreset(motionId) {
+        if (!this.project || !this.project.template_data) return;
+        this.project.template_data.animation_type = motionId;
+
+        document.querySelectorAll('.motion-preset-chip').forEach(chip => {
+            chip.classList.toggle('active', chip.getAttribute('data-motion') === motionId);
+        });
+
+        const motionSelect = document.getElementById('prop-animation-type');
+        if (motionSelect) motionSelect.value = motionId;
+
+        window.Preview.templateConfig = this.project.template_data;
+        window.Preview.renderFrame();
+        this.triggerAutosave();
+        showToast(`Motion preset set to "${motionId}"`, 'info');
+    },
+
+    syncMotionDuration(val) {
+        const num = parseFloat(val);
+        if (isNaN(num)) return;
+        this.project.template_data.animation_duration = num;
+        const mainInput = document.getElementById('prop-animation-duration');
+        if (mainInput) mainInput.value = num;
+        window.Preview.templateConfig = this.project.template_data;
+        this.triggerAutosave();
+    },
+
+    toggleBeatPulse(checked) {
+        if (!this.project || !this.project.template_data) return;
+        this.project.template_data.beat_pulse = checked;
+        window.Preview.templateConfig = this.project.template_data;
+        window.Preview.renderFrame();
+        this.triggerAutosave();
+    },
+
+    updatePanX(val) {
+        const num = parseInt(val);
+        this.project.template_data.bg_pan_x = num;
+        const badge = document.getElementById('panx-val-badge');
+        if (badge) badge.textContent = `${num}%`;
+        window.Preview.templateConfig = this.project.template_data;
+        window.Preview.renderFrame();
+        this.triggerAutosave();
+    },
+
+    updatePanY(val) {
+        const num = parseInt(val);
+        this.project.template_data.bg_pan_y = num;
+        const badge = document.getElementById('pany-val-badge');
+        if (badge) badge.textContent = `${num}%`;
+        window.Preview.templateConfig = this.project.template_data;
+        window.Preview.renderFrame();
+        this.triggerAutosave();
+    },
+
+    updateRotation(val) {
+        const num = parseInt(val);
+        this.project.template_data.bg_rotation = num;
+        const badge = document.getElementById('rotation-val-badge');
+        if (badge) badge.textContent = `${num}°`;
+        window.Preview.templateConfig = this.project.template_data;
+        window.Preview.renderFrame();
+        this.triggerAutosave();
+    },
+
     setupKeyboardShortcuts() {
         window.addEventListener('keydown', (e) => {
             const tag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
             const isEditable = document.activeElement && document.activeElement.isContentEditable;
-            if (tag === 'input' || tag === 'textarea' || tag === 'select' || isEditable) {
-                return;
-            }
+            if (tag === 'input' || tag === 'textarea' || tag === 'select' || isEditable) return;
 
-            // Space: Play / Pause
             if (e.code === 'Space') {
                 e.preventDefault();
                 if (window.Preview) window.Preview.togglePlay();
-            }
-            // Ctrl/Cmd + Z: Undo
-            else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+            } else if (e.key === '?') {
                 e.preventDefault();
-                if (window.Timeline) window.Timeline.undo();
-            }
-            // Ctrl/Cmd + Y or Ctrl/Cmd + Shift + Z: Redo
-            else if (((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') ||
-                     ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'z')) {
+                this.openShortcutsModal();
+            } else if (e.key.toLowerCase() === 'l') {
                 e.preventDefault();
-                if (window.Timeline) window.Timeline.redo();
-            }
-            // S: Split clip at playhead
-            else if (e.key.toLowerCase() === 's') {
-                e.preventDefault();
-                if (window.Timeline) window.Timeline.splitSelectedClip();
-            }
-            // Delete / Backspace: Delete selected clip
-            else if (e.key === 'Delete' || e.key === 'Backspace') {
-                e.preventDefault();
-                if (window.Timeline) window.Timeline.deleteSelectedClip();
+                if (window.Preview) window.Preview.toggleLoop();
             }
         });
+    },
+
+    openShortcutsModal() {
+        openModal('shortcuts-modal');
     },
 
     addImageClipToTimeline(assetId, assetName) {
@@ -132,7 +264,6 @@ const Editor = {
     },
 
     setupHeaderActions() {
-        // Project title rename
         const titleInput = document.getElementById('project-title-input');
         if (titleInput) {
             titleInput.value = this.project.title;
@@ -142,7 +273,6 @@ const Editor = {
             });
         }
 
-        // Aspect ratio selector
         const aspectSelect = document.getElementById('aspect-select');
         if (aspectSelect) {
             aspectSelect.value = this.project.aspect_ratio || '16:9';
@@ -150,56 +280,12 @@ const Editor = {
                 const newAspect = e.target.value;
                 this.project.aspect_ratio = newAspect;
                 window.Preview.setDimensions(newAspect);
+                const badge = document.getElementById('comp-aspect-badge');
+                if (badge) badge.textContent = newAspect;
                 this.triggerAutosave();
-                showToast(`Canvas format switched to ${newAspect}`, 'info');
+                showToast(`Format set to ${newAspect}`, 'info');
             });
         }
-
-        // Preview quality selector
-        const qualitySelect = document.getElementById('preview-quality-select');
-        if (qualitySelect) {
-            qualitySelect.addEventListener('change', (e) => {
-                showToast(`Preview resolution set to ${e.target.value}`, 'info');
-            });
-        }
-    },
-
-    setupSidebarTabs() {
-        document.querySelectorAll('.sidebar-tab-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.sidebar-tab-btn').forEach(b => b.classList.remove('active'));
-                document.querySelectorAll('.panel-section').forEach(p => p.classList.remove('active'));
-
-                btn.classList.add('active');
-                const target = btn.getAttribute('data-target');
-                const panel = document.getElementById(target);
-                if (panel) panel.classList.add('active');
-            });
-        });
-    },
-
-    setupTemplateSelection() {
-        const currentId = (this.project.template_data && this.project.template_data.template_id) || 'cinematic';
-        document.querySelectorAll('.template-card').forEach(card => {
-            if (card.getAttribute('data-template-id') === currentId) {
-                card.classList.add('active');
-            }
-            card.addEventListener('click', () => {
-                document.querySelectorAll('.template-card').forEach(c => c.classList.remove('active'));
-                card.classList.add('active');
-
-                const tId = card.getAttribute('data-template-id');
-                const tObj = TEMPLATES[tId];
-                if (tObj) {
-                    this.project.template_data = { ...this.project.template_data, ...tObj.defaults, template_id: tId };
-                    window.Preview.templateConfig = this.project.template_data;
-                    this.populateInspectorInputs();
-                    window.Preview.renderFrame();
-                    this.triggerAutosave();
-                    showToast(`Switched to "${tObj.name}" style`, 'success');
-                }
-            });
-        });
     },
 
     setupInspectorBindings() {
@@ -226,7 +312,7 @@ const Editor = {
         bindInput('prop-font-size', 'font_size', parseInt);
         bindInput('prop-font-weight', 'font_weight');
         bindInput('prop-letter-spacing-slider', 'letter_spacing', parseFloat, 'tracking-val-badge', v => `${v}px`);
-        
+
         // Colors
         bindInput('prop-text-color', 'text_color', v => v, 'text-color-hex');
         bindInput('prop-highlight-color', 'highlight_color', v => v, 'highlight-color-hex');
@@ -234,21 +320,24 @@ const Editor = {
         bindInput('prop-outline-width', 'outline_width', parseInt, 'outline-val-badge', v => `${v}px`);
         bindInput('prop-glow-color', 'glow_color', v => v, 'glow-color-hex');
         bindInput('prop-glow-size', 'glow_size', parseInt, 'glow-val-badge', v => `${v}px`);
-        bindInput('prop-visualizer-color', 'visualizer_color', v => v, 'vis-color-hex');
 
         // Placement
         bindInput('prop-position-y', 'position_y', parseInt, 'posy-val-badge', v => `${v}%`);
         bindInput('prop-position-x', 'position_x', parseInt, 'posx-val-badge', v => `${v}%`);
 
-        // Background Atmosphere
+        // Background
         bindInput('prop-bg-color', 'background_color', v => v, 'bg-color-hex');
+        bindInput('prop-bg-fit', 'bg_fit');
         bindInput('prop-overlay-opacity', 'overlay_opacity', parseFloat, 'overlay-val-badge', v => `${Math.round(v * 100)}%`);
         bindInput('prop-bg-blur', 'bg_blur', parseInt, 'blur-val-badge', v => `${v}px`);
         bindInput('prop-bg-zoom', 'bg_zoom');
 
-        // Motion & Transitions
+        // Motion
         bindInput('prop-animation-type', 'animation_type');
         bindInput('prop-animation-duration', 'animation_duration', parseFloat);
+        bindInput('prop-animation-direction', 'animation_direction');
+        bindInput('prop-animation-easing', 'animation_easing');
+        bindInput('prop-animation-intensity', 'animation_intensity');
     },
 
     populateInspectorInputs() {
@@ -266,39 +355,37 @@ const Editor = {
         setVal('prop-font-size', cfg.font_size);
         setVal('prop-font-size-slider', cfg.font_size);
         setVal('prop-font-weight', cfg.font_weight || '700');
-        setVal('prop-letter-spacing-slider', cfg.letter_spacing || 2.0);
-        setText('tracking-val-badge', `${cfg.letter_spacing || 2.0}px`);
+        setVal('prop-letter-spacing-slider', cfg.letter_spacing || 3.0);
+        setText('tracking-val-badge', `${cfg.letter_spacing || 3.0}px`);
 
-        setVal('prop-text-color', cfg.text_color || '#FFFFFF');
-        setText('text-color-hex', (cfg.text_color || '#FFFFFF').toUpperCase());
+        setVal('prop-text-color', cfg.text_color || '#F1EFEA');
+        setText('text-color-hex', (cfg.text_color || '#F1EFEA').toUpperCase());
 
-        setVal('prop-highlight-color', cfg.highlight_color || '#A78BFA');
-        setText('highlight-color-hex', (cfg.highlight_color || '#A78BFA').toUpperCase());
+        setVal('prop-highlight-color', cfg.highlight_color || '#A994FF');
+        setText('highlight-color-hex', (cfg.highlight_color || '#A994FF').toUpperCase());
 
-        setVal('prop-outline-color', cfg.outline_color || '#000000');
-        setText('outline-color-hex', (cfg.outline_color || '#000000').toUpperCase());
+        setVal('prop-outline-color', cfg.outline_color || '#090909');
+        setText('outline-color-hex', (cfg.outline_color || '#090909').toUpperCase());
 
         setVal('prop-outline-width', cfg.outline_width !== undefined ? cfg.outline_width : 2);
         setText('outline-val-badge', `${cfg.outline_width !== undefined ? cfg.outline_width : 2}px`);
 
-        setVal('prop-glow-color', cfg.glow_color || '#8B5CF6');
-        setText('glow-color-hex', (cfg.glow_color || '#8B5CF6').toUpperCase());
+        setVal('prop-glow-color', cfg.glow_color || '#A994FF');
+        setText('glow-color-hex', (cfg.glow_color || '#A994FF').toUpperCase());
 
         setVal('prop-glow-size', cfg.glow_size !== undefined ? cfg.glow_size : 18);
         setText('glow-val-badge', `${cfg.glow_size !== undefined ? cfg.glow_size : 18}px`);
 
-        setVal('prop-visualizer-color', cfg.visualizer_color || '#8B5CF6');
-        setText('vis-color-hex', (cfg.visualizer_color || '#8B5CF6').toUpperCase());
-
-        setVal('prop-position-y', cfg.position_y !== undefined ? cfg.position_y : 75);
-        setText('posy-val-badge', `${cfg.position_y !== undefined ? cfg.position_y : 75}%`);
+        setVal('prop-position-y', cfg.position_y !== undefined ? cfg.position_y : 78);
+        setText('posy-val-badge', `${cfg.position_y !== undefined ? cfg.position_y : 78}%`);
 
         setVal('prop-position-x', cfg.position_x !== undefined ? cfg.position_x : 50);
         setText('posx-val-badge', `${cfg.position_x !== undefined ? cfg.position_x : 50}%`);
 
-        setVal('prop-bg-color', cfg.background_color || '#08090D');
-        setText('bg-color-hex', (cfg.background_color || '#08090D').toUpperCase());
+        setVal('prop-bg-color', cfg.background_color || '#090909');
+        setText('bg-color-hex', (cfg.background_color || '#090909').toUpperCase());
 
+        setVal('prop-bg-fit', cfg.bg_fit || 'cover');
         setVal('prop-overlay-opacity', cfg.overlay_opacity !== undefined ? cfg.overlay_opacity : 0.4);
         setText('overlay-val-badge', `${Math.round((cfg.overlay_opacity !== undefined ? cfg.overlay_opacity : 0.4) * 100)}%`);
 
@@ -306,15 +393,19 @@ const Editor = {
         setText('blur-val-badge', `${cfg.bg_blur !== undefined ? cfg.bg_blur : 0}px`);
 
         setVal('prop-bg-zoom', cfg.bg_zoom || 'zoom-in');
-        setVal('prop-animation-type', cfg.animation_type || 'fade-slide');
-        setVal('prop-animation-duration', cfg.animation_duration || 0.35);
+        setVal('prop-animation-type', cfg.animation_type || 'cinematic-rise');
+        setVal('prop-animation-duration', cfg.animation_duration || 0.45);
+        setVal('prop-animation-duration-ins', cfg.animation_duration || 0.45);
+        setVal('prop-animation-direction', cfg.animation_direction || 'up');
 
-        // Effect checkboxes
+        const letterboxToggle = document.getElementById('effect-letterbox-toggle');
+        if (letterboxToggle) letterboxToggle.checked = Boolean(cfg.show_letterbox || cfg.template_id === 'midnight_cinema' || cfg.template_id === 'cinematic');
+
         const visToggle = document.getElementById('effect-visualizer-toggle');
         if (visToggle) visToggle.checked = Boolean(cfg.show_visualizer || cfg.template_id === 'visualizer');
 
-        const letterboxToggle = document.getElementById('effect-letterbox-toggle');
-        if (letterboxToggle) letterboxToggle.checked = Boolean(cfg.show_letterbox || cfg.template_id === 'cinematic');
+        const beatPulseToggle = document.getElementById('effect-beat-pulse');
+        if (beatPulseToggle) beatPulseToggle.checked = Boolean(cfg.beat_pulse !== false);
     },
 
     setBackgroundColor(hex) {
@@ -329,14 +420,6 @@ const Editor = {
         this.triggerAutosave();
     },
 
-    toggleVisualizerEffect(checked) {
-        if (!this.project || !this.project.template_data) return;
-        this.project.template_data.show_visualizer = checked;
-        window.Preview.templateConfig = this.project.template_data;
-        window.Preview.renderFrame();
-        this.triggerAutosave();
-    },
-
     toggleLetterboxEffect(checked) {
         if (!this.project || !this.project.template_data) return;
         this.project.template_data.show_letterbox = checked;
@@ -345,13 +428,9 @@ const Editor = {
         this.triggerAutosave();
     },
 
-    toggleGlowEffect(checked) {
+    toggleVisualizerEffect(checked) {
         if (!this.project || !this.project.template_data) return;
-        this.project.template_data.glow_size = checked ? 18 : 0;
-        const glowSlider = document.getElementById('prop-glow-size');
-        const glowBadge = document.getElementById('glow-val-badge');
-        if (glowSlider) glowSlider.value = this.project.template_data.glow_size;
-        if (glowBadge) glowBadge.textContent = `${this.project.template_data.glow_size}px`;
+        this.project.template_data.show_visualizer = checked;
         window.Preview.templateConfig = this.project.template_data;
         window.Preview.renderFrame();
         this.triggerAutosave();
@@ -388,15 +467,6 @@ const Editor = {
         window.Preview.templateConfig = this.project.template_data;
         window.Preview.renderFrame();
         this.triggerAutosave();
-    },
-
-    setMasterVolume(val) {
-        const num = parseFloat(val);
-        if (window.Preview && window.Preview.audio) {
-            window.Preview.audio.volume = num;
-        }
-        const badge = document.getElementById('volume-val-badge');
-        if (badge) badge.textContent = `${Math.round(num * 100)}%`;
     },
 
     setupMediaUploads() {

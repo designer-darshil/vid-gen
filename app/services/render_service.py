@@ -144,27 +144,42 @@ class RenderService:
         outline_w = int(template.get("outline_width", 2))
         shadow_w = 3
 
-        if template_id == "neon":
+        if template_id in ("midnight_cinema", "cinematic"):
+            primary_color = cls._color_to_ass(template.get("text_color", "#F1EFEA"), "&H00EAEFF1")
+            outline_color = cls._color_to_ass(template.get("outline_color", "#090909"), "&H00090909")
+            shadow_color = cls._color_to_ass(template.get("shadow_color", "rgba(0,0,0,0.85)"), "&H80000000")
+            outline_w = int(template.get("outline_width", 2))
+            shadow_w = 4
+        elif template_id == "soft_focus":
+            primary_color = cls._color_to_ass(template.get("text_color", "#FFFDF7"), "&H00F7FDFF")
+            outline_w = 0
+            shadow_w = 6
+            shadow_color = cls._color_to_ass(template.get("glow_color", "#FFF8E6"), "&H80E6F8FF")
+        elif template_id == "editorial_serif":
+            primary_color = cls._color_to_ass(template.get("text_color", "#F1EFEA"), "&H00EAEFF1")
+            outline_w = int(template.get("outline_width", 1))
+            shadow_w = 2
+        elif template_id in ("kinetic_type", "kinetic"):
+            outline_w = int(template.get("outline_width", 3))
+            shadow_w = 4
+            primary_color = cls._color_to_ass(template.get("text_color", "#FFFFFF"), "&H00FFFFFF")
+        elif template_id in ("dream_sequence", "dreamy", "aesthetic"):
+            outline_w = int(template.get("outline_width", 0))
+            shadow_w = 5
+            shadow_color = cls._color_to_ass(template.get("glow_color", "#A994FF"), "&H80FF94A9")
+        elif template_id in ("minimal_verse", "minimal"):
+            outline_w = 0
+            shadow_w = 1
+        elif template_id in ("karaoke_highlight", "karaoke"):
+            primary_color = cls._color_to_ass(template.get("highlight_color", "#A994FF"), "&H00FF94A9")
+            secondary_color = cls._color_to_ass(template.get("text_color", "#8E8C99"), "&H00998C8E")
+            outline_w = int(template.get("outline_width", 2))
+            shadow_w = 2
+        elif template_id == "neon":
             primary_color = "&H00FFFFFF"
             outline_color = cls._color_to_ass(template.get("glow_color", "#00F2FE"), "&H00FEF200")
             outline_w = 5
             shadow_w = 8
-        elif template_id == "minimal":
-            outline_w = 0
-            shadow_w = 1
-        elif template_id == "karaoke":
-            primary_color = cls._color_to_ass(template.get("highlight_color", "#00F2FE"), "&H00FEF200")
-            secondary_color = cls._color_to_ass(template.get("text_color", "#777777"), "&H00777777")
-            outline_w = int(template.get("outline_width", 2))
-            shadow_w = 2
-        elif template_id in ("dreamy", "aesthetic"):
-            outline_w = int(template.get("outline_width", 0))
-            shadow_w = 4
-            shadow_color = cls._color_to_ass(template.get("glow_color", "#C4B5FD"), "&H80FDB5C4")
-        elif template_id == "kinetic":
-            outline_w = int(template.get("outline_width", 3))
-            shadow_w = 4
-            primary_color = cls._color_to_ass(template.get("text_color", "#FFFFFF"), "&H00FFFFFF")
 
         ass_content = f"""[Script Info]
 Title: LyricStudio Subtitles
@@ -182,6 +197,7 @@ Style: Default,{font_name},{font_size},{primary_color},{secondary_color},{outlin
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
+        anim_type = template.get("animation_type", "")
         events = []
         for line in lyrics_data:
             start_t = cls._sec_to_ass_time(line.get("start", 0.0))
@@ -189,7 +205,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             raw_text = line.get("text", "")
             words = line.get("words", [])
 
-            if template_id == "karaoke" and words:
+            if (template_id in ("karaoke_highlight", "karaoke") or anim_type == "word-highlight") and words:
                 # Karaoke timing tags: {\k<duration_in_cs>}word
                 k_text_parts = []
                 for w in words:
@@ -197,17 +213,24 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                     cs = int(round(w_dur_sec * 100))
                     k_text_parts.append(f"{{\\k{cs}}}{w.get('word', '')}")
                 line_text = " ".join(k_text_parts)
-            elif template_id == "minimal":
-                # Smooth fade in and fade out
+            elif template_id in ("minimal_verse", "minimal") or anim_type == "fade-darkness":
                 line_text = f"{{\\fad(250,250)}}{raw_text}"
+            elif template_id == "soft_focus" or anim_type == "blur-focus":
+                line_text = f"{{\\blur6\\t(0,350,\\blur0)\\fad(280,240)}}{raw_text}"
+            elif template_id == "editorial_serif":
+                line_text = f"{{\\fsp2\\fad(280,260)}}{raw_text}"
             elif template_id == "neon":
                 line_text = f"{{\\blur4\\fscx102\\fscy102}}{raw_text}"
-            elif template_id == "cinematic":
+            elif template_id in ("midnight_cinema", "cinematic") or anim_type == "cinematic-rise":
                 line_text = f"{{\\fad(300,300)\\fsp3}}{raw_text}"
-            elif template_id in ("dreamy", "aesthetic"):
+            elif template_id in ("dream_sequence", "dreamy", "aesthetic"):
                 line_text = f"{{\\fad(350,350)\\blur2\\fsp2}}{raw_text}"
-            elif template_id == "kinetic":
+            elif template_id in ("kinetic_type", "kinetic") or anim_type == "beat-pulse":
                 line_text = f"{{\\t(0,180,\\fscx112\\fscy112)\\t(180,350,\\fscx100\\fscy100)\\fad(150,150)}}{raw_text}"
+            elif anim_type == "tracking-reveal":
+                line_text = f"{{\\fsp0\\t(0,350,\\fsp4)\\fad(250,200)}}{raw_text}"
+            elif anim_type == "scale-drift":
+                line_text = f"{{\\t(0,300,\\fscx105\\fscy105)\\fad(250,200)}}{raw_text}"
             else:
                 line_text = f"{{\\fad(200,200)}}{raw_text}"
 
@@ -321,14 +344,15 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                 last_v = "[v_dim]"
 
             # Cinematic letterbox bars
-            if template.get("template_id") == "cinematic":
+            if template.get("template_id") in ("midnight_cinema", "cinematic") or template.get("show_letterbox", False):
                 bar_h = int(height * 0.08)
                 filter_complex_steps.append(
                     f"{last_v}drawbox=y=0:w={width}:h={bar_h}:c=black@1:t=fill,drawbox=y={height - bar_h}:w={width}:h={bar_h}:c=black@1:t=fill[v_cinema]"
                 )
                 last_v = "[v_cinema]"
 
-            # Visualizer filter if template is dynamic visualizer
+            # Visualizer filter if template is dynamic visualizer or show_visualizer is true
+            is_visualizer = template.get("template_id") == "visualizer" or template.get("show_visualizer", False)
             if is_visualizer:
                 vis_color = template.get("visualizer_color", "#4FACFE").lstrip("#")
                 if len(vis_color) != 6:

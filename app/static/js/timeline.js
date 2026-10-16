@@ -477,7 +477,90 @@ class TimelineEditor {
         });
     }
 
+    duplicateSelectedClip() {
+        if (!this.selectedClip) {
+            showToast('Select a clip first to duplicate', 'info');
+            return;
+        }
+        const { data, trackType } = this.selectedClip;
+        this.pushUndoState();
+        const duration = Math.max(0.5, data.end - data.start);
+        const newStart = Math.round((data.end + 0.1) * 100) / 100;
+        const newEnd = Math.round((newStart + duration) * 100) / 100;
+
+        if (trackType === 'lyrics') {
+            const newLine = {
+                start: newStart,
+                end: newEnd,
+                text: `${data.text} (copy)`,
+                words: []
+            };
+            this.project.lyrics_data.push(newLine);
+            this.project.lyrics_data.sort((a, b) => a.start - b.start);
+        } else if (trackType === 'images') {
+            const track = (this.project.timeline_data.tracks || []).find(t => t.type === 'image');
+            if (track) {
+                if (!track.clips) track.clips = [];
+                const newClip = {
+                    ...data,
+                    id: 'clip_' + Date.now(),
+                    start: newStart,
+                    end: newEnd
+                };
+                track.clips.push(newClip);
+            }
+        }
+        this.renderTracks();
+        if (window.SyncUI) window.SyncUI.renderLinesList();
+        if (window.Editor) window.Editor.triggerAutosave();
+        showToast('Clip duplicated', 'success');
+    }
+
+    toggleTimelineDock() {
+        const tl = document.getElementById('editor-timeline');
+        if (!tl) return;
+        tl.classList.toggle('collapsed');
+        const isCollapsed = tl.classList.contains('collapsed');
+        const btn = document.getElementById('btn-collapse-timeline');
+        if (btn) {
+            btn.innerHTML = isCollapsed ? '<i class="fa-solid fa-chevron-up"></i> <span>Expand Timeline</span>' : '<i class="fa-solid fa-chevron-down"></i> <span>Collapse</span>';
+            btn.title = isCollapsed ? 'Expand timeline dock' : 'Collapse timeline dock to expand canvas';
+        }
+        showToast(isCollapsed ? 'Timeline collapsed' : 'Timeline expanded', 'info');
+    }
+
     setupEventListeners() {
+        // Timeline vertical resizer
+        const resizer = document.getElementById('timeline-resizer');
+        const tl = document.getElementById('editor-timeline');
+        if (resizer && tl) {
+            let isResizingTL = false;
+            let startY = 0;
+            let startH = 0;
+
+            resizer.addEventListener('mousedown', (e) => {
+                isResizingTL = true;
+                startY = e.clientY;
+                startH = tl.offsetHeight;
+                document.body.style.cursor = 'ns-resize';
+                e.preventDefault();
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!isResizingTL) return;
+                const deltaY = startY - e.clientY;
+                const newH = Math.max(140, Math.min(500, startH + deltaY));
+                tl.style.height = `${newH}px`;
+            });
+
+            window.addEventListener('mouseup', () => {
+                if (isResizingTL) {
+                    isResizingTL = false;
+                    document.body.style.cursor = '';
+                }
+            });
+        }
+
         // Scrubbing on Time Ruler
         if (this.ruler) {
             const handleRulerScrub = (e) => {
@@ -517,6 +600,9 @@ class TimelineEditor {
             } else if (e.code === 'KeyS') {
                 e.preventDefault();
                 this.splitSelectedClip();
+            } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'd') {
+                e.preventDefault();
+                this.duplicateSelectedClip();
             } else if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
                 e.preventDefault();
                 if (e.shiftKey) this.redo();
