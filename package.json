@@ -1,0 +1,18 @@
+{
+  "name": "lyricstudio",
+  "version": "1.0.0",
+  "description": "Private, personal animated lyrics video creator powered by Python, Flask, FFmpeg, HTML5 Canvas, and modern JS",
+  "scripts": {
+    "dev": ".venv/bin/python wsgi.py --host",
+    "start": ".venv/bin/gunicorn -w 2 -b 127.0.0.1:5001 wsgi:app",
+    "test": ".venv/bin/pytest"
+  },
+  "keywords": [
+    "lyrics-video-generator",
+    "ffmpeg",
+    "karaoke",
+    "flask"
+  ],
+  "author": "LyricStudio",
+  "license": "Private"
+}

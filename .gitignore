@@ -1,0 +1,34 @@
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+.secret_key
+data/.secret_key
+
+# Python bytecode and virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+env/
+venv/
+ENV/
+
+# Testing cache and artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local databases, uploads, and renders
+data/*.db
+data/*.db-wal
+data/*.db-shm
+data/uploads/
+data/renders/
+data/thumbnails/
+
+# OS specific files
+.DS_Store
+Thumbs.db
