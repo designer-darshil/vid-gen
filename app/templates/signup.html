@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}Create Account — LyricStudio{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <div class="auth-logo">
+                <svg width="28" height="28" viewBox="0 0 32 32" fill="none" class="brand-mark">
+                    <rect width="32" height="32" rx="6" fill="#1D1D1D"/>
+                    <path d="M8 19V13M12 23V9M16 26V6M20 21V11M24 18V14" stroke="#7C5CFC" stroke-width="2.2" stroke-linecap="round"/>
+                </svg>
+                <h1>LyricStudio</h1>
+            </div>
+            <p class="auth-subtitle">Create your personal creator account</p>
+        </div>
+
+        {% if error %}
+        <div class="auth-error" role="alert" id="server-error-banner">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <span>{{ error }}</span>
+        </div>
+        {% endif %}
+
+        <div class="auth-error" role="alert" id="client-error-banner" style="display: none;">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <span id="client-error-text"></span>
+        </div>
+
+        <form method="POST" action="{{ url_for('auth.signup') }}" id="signup-form" novalidate>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+            <div class="form-group">
+                <label class="form-label" for="email">Email address</label>
+                <input 
+                    class="form-control" 
+                    type="email" 
+                    id="email" 
+                    name="email" 
+                    placeholder="name@example.com" 
+                    value="{{ request.form.get('email', '') }}"
+                    required 
+                    autofocus 
+                    autocomplete="email"
+                    aria-describedby="email-error"
+                >
+                <span class="field-error" id="email-error" style="display: none;">A valid email is required.</span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">Password</label>
+                <div class="password-input-wrapper">
+                    <input 
+                        class="form-control" 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        placeholder="At least 6 characters" 
+                        required 
+                        autocomplete="new-password"
+                        aria-describedby="password-error"
+                    >
+                    <button 
+                        type="button" 
+                        class="password-toggle-btn" 
+                        id="toggle-password" 
+                        title="Show password" 
+                        aria-label="Show password"
+                        tabindex="0"
+                    >
+                        <i class="fa-regular fa-eye" id="toggle-password-icon"></i>
+                    </button>
+                </div>
+                <span class="field-error" id="password-error" style="display: none;">Password must be at least 6 characters.</span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="confirm_password">Confirm Password</label>
+                <div class="password-input-wrapper">
+                    <input 
+                        class="form-control" 
+                        type="password" 
+                        id="confirm_password" 
+                        name="confirm_password" 
+                        placeholder="Re-enter your password" 
+                        required 
+                        autocomplete="new-password"
+                        aria-describedby="confirm-error"
+                    >
+                    <button 
+                        type="button" 
+                        class="password-toggle-btn" 
+                        id="toggle-confirm-password" 
+                        title="Show password" 
+                        aria-label="Show password"
+                        tabindex="0"
+                    >
+                        <i class="fa-regular fa-eye" id="toggle-confirm-icon"></i>
+                    </button>
+                </div>
+                <span class="field-error" id="confirm-error" style="display: none;">Passwords must match.</span>
+            </div>
+
+            <button type="submit" class="btn btn-primary auth-submit-btn" id="signup-btn">
+                <i class="fa-solid fa-user-plus"></i> Create Account
+            </button>
+        </form>
+
+        <div style="text-align: center; margin-top: 18px; font-size: 16px; color: var(--color-text-secondary);">
+            Already have an account? <a href="{{ url_for('auth.login') }}" style="color: var(--color-accent); font-weight: 500; text-decoration: none;">Sign in</a>
+        </div>
+
+        <div class="auth-footer">
+            <p><i class="fa-solid fa-envelope-circle-check"></i> Email verification sent automatically to confirm ownership</p>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function setupToggle(btnId, inputId, iconId) {
+        const btn = document.getElementById(btnId);
+        const input = document.getElementById(inputId);
+        const icon = document.getElementById(iconId);
+        if (btn && input && icon) {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const isPassword = input.getAttribute('type') === 'password';
+                input.setAttribute('type', isPassword ? 'text' : 'password');
+                if (isPassword) {
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                } else {
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                }
+                input.focus();
+            });
+        }
+    }
+
+    setupToggle('toggle-password', 'password', 'toggle-password-icon');
+    setupToggle('toggle-confirm-password', 'confirm_password', 'toggle-confirm-icon');
+
+    const form = document.getElementById('signup-form');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const confirmInput = document.getElementById('confirm_password');
+    const emailError = document.getElementById('email-error');
+    const passwordError = document.getElementById('password-error');
+    const confirmError = document.getElementById('confirm-error');
+    const clientErrorBanner = document.getElementById('client-error-banner');
+    const clientErrorText = document.getElementById('client-error-text');
+
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            let isValid = true;
+            emailError.style.display = 'none';
+            passwordError.style.display = 'none';
+            confirmError.style.display = 'none';
+            clientErrorBanner.style.display = 'none';
+
+            const emailVal = emailInput.value.trim();
+            const passVal = passwordInput.value;
+            const confirmVal = confirmInput.value;
+
+            if (!emailVal || !emailVal.includes('@')) {
+                emailError.style.display = 'block';
+                emailInput.focus();
+                isValid = false;
+            } else if (passVal.length < 6) {
+                passwordError.style.display = 'block';
+                passwordInput.focus();
+                isValid = false;
+            } else if (passVal !== confirmVal) {
+                confirmError.style.display = 'block';
+                confirmInput.focus();
+                isValid = false;
+            }
+
+            if (!isValid) {
+                e.preventDefault();
+                clientErrorText.textContent = 'Please resolve the highlighted errors.';
+                clientErrorBanner.style.display = 'flex';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

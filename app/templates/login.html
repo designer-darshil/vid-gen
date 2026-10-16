@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}Sign in — LyricStudio{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <div class="auth-logo">
+                <svg width="28" height="28" viewBox="0 0 32 32" fill="none" class="brand-mark">
+                    <rect width="32" height="32" rx="6" fill="#1D1D1D"/>
+                    <path d="M8 19V13M12 23V9M16 26V6M20 21V11M24 18V14" stroke="#7C5CFC" stroke-width="2.2" stroke-linecap="round"/>
+                </svg>
+                <h1>LyricStudio</h1>
+            </div>
+            <p class="auth-subtitle">Sign in to your creator workspace</p>
+        </div>
+
+        {% if not admin_configured and not supabase_configured %}
+        <div class="auth-notice auth-notice-warning" role="alert">
+            <i class="fa-solid fa-triangle-exclamation auth-notice-icon"></i>
+            <div class="auth-notice-content">
+                <strong>Configuration required</strong>
+                <p>Authentication credentials are not configured. Please define <code>ADMIN_USERNAME</code> &amp; <code>ADMIN_PASSWORD</code> or Supabase API keys in your <code>.env</code> file.</p>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if success_msg %}
+        <div class="auth-notice auth-notice-success" role="alert" style="border-left: 3px solid #10B981; background: rgba(16, 185, 129, 0.08); padding: 12px 14px; border-radius: var(--radius-md); margin-bottom: 18px; font-size: 16px; color: #D1FAE5; display: flex; align-items: center; gap: 10px;">
+            <i class="fa-solid fa-circle-check" style="color: #10B981;"></i>
+            <span>{{ success_msg }}</span>
+        </div>
+        {% endif %}
+
+        {% if error %}
+        <div class="auth-error" role="alert" id="server-error-banner">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <span>{{ error }}</span>
+        </div>
+        {% endif %}
+
+        <div class="auth-error" role="alert" id="client-error-banner" style="display: none;">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <span id="client-error-text"></span>
+        </div>
+
+        <form method="POST" action="{{ url_for('auth.login') }}" id="login-form" novalidate>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+            <div class="form-group">
+                <label class="form-label" for="username">Username or Email</label>
+                <input 
+                    class="form-control" 
+                    type="text" 
+                    id="username" 
+                    name="username" 
+                    placeholder="Enter your username or email" 
+                    value="{{ request.form.get('username', '') }}"
+                    required 
+                    autofocus 
+                    autocomplete="username"
+                    aria-describedby="username-error"
+                >
+                <span class="field-error" id="username-error" style="display: none;">Username or email is required.</span>
+            </div>
+
+            <div class="form-group">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <label class="form-label" for="password" style="margin-bottom: 0;">Password</label>
+                    {% if supabase_configured %}
+                    <a href="{{ url_for('auth.forgot_password') }}" style="font-size: 16px; color: var(--color-accent); text-decoration: none;">Forgot password?</a>
+                    {% endif %}
+                </div>
+                <div class="password-input-wrapper">
+                    <input 
+                        class="form-control" 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        placeholder="Enter password" 
+                        required 
+                        autocomplete="current-password"
+                        aria-describedby="password-error"
+                    >
+                    <button 
+                        type="button" 
+                        class="password-toggle-btn" 
+                        id="toggle-password" 
+                        title="Show password" 
+                        aria-label="Show password"
+                        tabindex="0"
+                    >
+                        <i class="fa-regular fa-eye" id="toggle-password-icon"></i>
+                    </button>
+                </div>
+                <span class="field-error" id="password-error" style="display: none;">Password is required.</span>
+            </div>
+
+            <button type="submit" class="btn btn-primary auth-submit-btn" id="login-btn" {% if not admin_configured and not supabase_configured %}disabled{% endif %}>
+                <i class="fa-solid fa-arrow-right-to-bracket"></i> Sign in
+            </button>
+        </form>
+
+        {% if supabase_configured %}
+        <div style="text-align: center; margin-top: 18px; font-size: 16px; color: var(--color-text-secondary);">
+            Don't have an account? <a href="{{ url_for('auth.signup') }}" style="color: var(--color-accent); font-weight: 500; text-decoration: none;">Create account</a>
+        </div>
+        {% endif %}
+
+        <div class="auth-footer">
+            <p><i class="fa-solid fa-shield-halved"></i> Protected by rate limiting and secure session encryption</p>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const passwordInput = document.getElementById('password');
+    const toggleBtn = document.getElementById('toggle-password');
+    const toggleIcon = document.getElementById('toggle-password-icon');
+    const loginForm = document.getElementById('login-form');
+    const usernameInput = document.getElementById('username');
+    const clientErrorBanner = document.getElementById('client-error-banner');
+    const clientErrorText = document.getElementById('client-error-text');
+    const usernameError = document.getElementById('username-error');
+    const passwordError = document.getElementById('password-error');
+
+    // Show/Hide password toggle
+    if (toggleBtn && passwordInput && toggleIcon) {
+        toggleBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const isPassword = passwordInput.getAttribute('type') === 'password';
+            passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
+            
+            if (isPassword) {
+                toggleIcon.classList.remove('fa-eye');
+                toggleIcon.classList.add('fa-eye-slash');
+                toggleBtn.setAttribute('title', 'Hide password');
+                toggleBtn.setAttribute('aria-label', 'Hide password');
+            } else {
+                toggleIcon.classList.remove('fa-eye-slash');
+                toggleIcon.classList.add('fa-eye');
+                toggleBtn.setAttribute('title', 'Show password');
+                toggleBtn.setAttribute('aria-label', 'Show password');
+            }
+            passwordInput.focus();
+        });
+    }
+
+    // Client-side form validation before submit
+    if (loginForm) {
+        loginForm.addEventListener('submit', function(e) {
+            let isValid = true;
+            usernameError.style.display = 'none';
+            passwordError.style.display = 'none';
+            clientErrorBanner.style.display = 'none';
+
+            const userVal = usernameInput.value.trim();
+            const passVal = passwordInput.value;
+
+            if (!userVal) {
+                usernameError.style.display = 'block';
+                usernameInput.focus();
+                isValid = false;
+            }
+
+            if (!passVal) {
+                passwordError.style.display = 'block';
+                if (isValid) passwordInput.focus();
+                isValid = false;
+            }
+
+            if (!isValid) {
+                e.preventDefault();
+                clientErrorText.textContent = 'Please fill in all required fields.';
+                clientErrorBanner.style.display = 'flex';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

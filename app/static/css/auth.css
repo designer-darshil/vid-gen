@@ -1,0 +1,177 @@
+/* ==========================================================================
+   LyricStudio Authentication Stylesheet
+   Minimal, disciplined dark layout for login and account initialization.
+   STRICT RULE: The minimum font size anywhere is 16px. No text below 16px.
+   ========================================================================== */
+
+.auth-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--bg-app);
+    padding: var(--space-5);
+}
+
+.auth-card {
+    background: var(--surface-primary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    width: 100%;
+    max-width: 440px;
+    padding: var(--space-7) var(--space-6);
+    box-shadow: var(--shadow-modal);
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: var(--space-6);
+}
+
+.auth-logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-2);
+}
+
+.auth-logo h1 {
+    font-size: var(--font-size-2xl);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: -0.015em;
+    color: var(--text-primary);
+}
+
+.auth-subtitle {
+    font-size: var(--font-size-base);
+    color: var(--text-secondary);
+}
+
+/* Setup Notice Banner */
+.auth-notice {
+    padding: var(--space-4);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-base);
+    margin-bottom: var(--space-5);
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    line-height: var(--line-height-body);
+}
+
+.auth-notice-warning {
+    background: var(--color-warning-bg);
+    border: 1px solid var(--color-warning-border);
+    color: #FDE047;
+}
+
+.auth-notice-icon {
+    font-size: 20px;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.auth-notice-content strong {
+    display: block;
+    font-size: var(--font-size-base);
+    margin-bottom: var(--space-1);
+    color: #FEF08A;
+}
+
+.auth-notice-content p {
+    font-size: var(--font-size-base);
+    color: #FEF9C3;
+    margin: 0;
+}
+
+.auth-notice-content code {
+    background: rgba(0, 0, 0, 0.4);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: var(--font-size-base);
+    color: #FFFFFF;
+}
+
+/* Error Banner */
+.auth-error {
+    background: var(--color-error-bg);
+    border: 1px solid var(--color-error-border);
+    color: #FFA596;
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-base);
+    margin-bottom: var(--space-5);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.auth-error i {
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+/* Field Inline Error */
+.field-error {
+    display: block;
+    color: var(--color-error);
+    font-size: var(--font-size-base);
+    margin-top: var(--space-1);
+}
+
+/* Password Input & Toggle Control */
+.password-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.password-input-wrapper input {
+    padding-right: 48px;
+}
+
+.password-toggle-btn {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 38px;
+    height: 38px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.password-toggle-btn:hover {
+    color: var(--text-primary);
+    background: var(--surface-hover);
+}
+
+.password-toggle-btn:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    color: var(--text-primary);
+}
+
+/* Submit Button & Footer */
+.auth-submit-btn {
+    width: 100%;
+    height: 42px;
+    margin-top: var(--space-3);
+}
+
+.auth-footer {
+    margin-top: var(--space-6);
+    text-align: center;
+    font-size: var(--font-size-base);
+    color: var(--text-muted);
+}

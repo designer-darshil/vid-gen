@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Setup Account — LyricStudio{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <div class="auth-logo">
+                <svg width="28" height="28" viewBox="0 0 32 32" fill="none" class="brand-mark">
+                    <rect width="32" height="32" rx="6" fill="#1D1D1D"/>
+                    <path d="M8 19V13M12 23V9M16 26V6M20 21V11M24 18V14" stroke="#7C5CFC" stroke-width="2.2" stroke-linecap="round"/>
+                </svg>
+                <h1>LyricStudio</h1>
+            </div>
+            <p class="auth-subtitle">Initialize your private owner studio credentials</p>
+        </div>
+
+        {% if error %}
+        <div class="auth-error">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <span>{{ error }}</span>
+        </div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('auth.setup') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="form-group">
+                <label class="form-label" for="username">Owner username</label>
+                <input class="form-control" type="text" id="username" name="username" placeholder="e.g. admin or artist" required autofocus>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">Master password</label>
+                <input class="form-control" type="password" id="password" name="password" placeholder="At least 6 characters" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="confirm_password">Confirm master password</label>
+                <input class="form-control" type="password" id="confirm_password" name="confirm_password" placeholder="Re-enter password" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary auth-submit-btn">
+                Initialize account
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            <p><i class="fa-solid fa-shield-halved"></i> Private local storage • Self-hosted studio</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

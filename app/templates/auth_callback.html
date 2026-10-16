@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Authenticating — LyricStudio{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card" style="text-align: center; padding: 48px 32px;">
+        <div style="width: 48px; height: 48px; border: 3px solid var(--color-border); border-top-color: var(--color-accent); border-radius: 50%; margin: 0 auto 24px; animation: spin 0.8s linear infinite;"></div>
+        <h1 style="font-size: 20px; font-weight: 600; color: var(--color-text-primary); margin-bottom: 8px;">Verifying authentication...</h1>
+        <p style="font-size: 16px; color: var(--color-text-secondary);" id="status-message">Establishing your secure creator session.</p>
+    </div>
+</div>
+
+<style>
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+    const statusMsg = document.getElementById('status-message');
+    
+    // Check hash fragment (common for Supabase email confirmation & password recovery)
+    const hash = window.location.hash ? window.location.hash.substring(1) : '';
+    const hashParams = new URLSearchParams(hash);
+    const searchParams = new URLSearchParams(window.location.search);
+
+    const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
+    const type = hashParams.get('type') || searchParams.get('type');
+    const errorCode = hashParams.get('error') || searchParams.get('error');
+    const errorDescription = hashParams.get('error_description') || searchParams.get('error_description');
+
+    if (errorCode) {
+        statusMsg.textContent = errorDescription || 'Authentication failed.';
+        statusMsg.style.color = '#EF4444';
+        setTimeout(() => {
+            window.location.href = "{{ url_for('auth.login') }}?error=" + encodeURIComponent(errorDescription || 'Authentication error');
+        }, 2000);
+        return;
+    }
+
+    if (type === 'recovery' && accessToken) {
+        // Password recovery flow -> redirect to reset password page with token
+        window.location.href = "{{ url_for('auth.reset_password') }}?token=" + encodeURIComponent(accessToken);
+        return;
+    }
+
+    if (accessToken) {
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            const res = await fetch("{{ url_for('auth.set_auth_session') }}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": csrfToken
+                },
+                body: JSON.stringify({ access_token: accessToken })
+            });
+            const data = await res.json();
+            if (data.success && data.redirect_url) {
+                window.location.href = data.redirect_url;
+            } else {
+                window.location.href = "{{ url_for('auth.login') }}?message=" + encodeURIComponent("Email verified successfully! You can now sign in.");
+            }
+        } catch (err) {
+            window.location.href = "{{ url_for('auth.login') }}";
+        }
+    } else {
+        // Fallback: if no tokens, redirect to dashboard or login
+        setTimeout(() => {
+            window.location.href = "{{ url_for('auth.login') }}";
+        }, 1500);
+    }
+});
+</script>
+{% endblock %}
