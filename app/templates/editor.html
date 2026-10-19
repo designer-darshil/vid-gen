@@ -21,8 +21,8 @@
 
             <div class="header-brand">
                 <svg width="26" height="26" viewBox="0 0 32 32" fill="none" class="brand-glyph" aria-hidden="true">
-                    <rect width="32" height="32" rx="7" fill="#171717" stroke="#333333" stroke-width="1.2"/>
-                    <path d="M8 19V13M12 23V9M16 26V6M20 21V11M24 18V14" stroke="#A994FF" stroke-width="2.4" stroke-linecap="round"/>
+                    <rect width="32" height="32" rx="8" fill="#0C1A2B" stroke="#B6FF3B" stroke-width="1.4"/>
+                    <path d="M8 19V13M12 23V9M16 26V6M20 21V11M24 18V14" stroke="#B6FF3B" stroke-width="2.4" stroke-linecap="round"/>
                 </svg>
                 <span class="brand-text">LyricStudio</span>
             </div>
@@ -72,8 +72,11 @@
                 </button>
             </div>
         </div>
-
-        <div class="header-right">
+        <div>
+            <button class="btn btn-ghost" onclick="Editor.openAISettingsModal()" title="AI Studio & Integrations Settings">
+                <i class="fa-solid fa-gear" aria-hidden="true"></i>
+                <span>AI & Setup</span>
+            </button>
             <button class="btn btn-ghost" onclick="Editor.openShortcutsModal()" title="Keyboard Shortcuts">
                 <i class="fa-solid fa-keyboard" aria-hidden="true"></i>
                 <span>Shortcuts</span>
@@ -105,21 +108,29 @@
                 <i class="fa-solid fa-align-left"></i>
                 <span>Lyrics</span>
             </button>
-            <button class="rail-btn" data-target="drawer-typography" title="Typography">
+            <button class="rail-btn" data-target="drawer-text" title="Text & Typography">
                 <i class="fa-solid fa-font"></i>
-                <span>Typography</span>
+                <span>Text</span>
             </button>
-            <button class="rail-btn" data-target="drawer-motion" title="Motion Design">
+            <button class="rail-btn" data-target="drawer-backgrounds" title="Backgrounds & Atmosphere">
+                <i class="fa-solid fa-mountain-sun"></i>
+                <span>Backdrop</span>
+            </button>
+            <button class="rail-btn" data-target="drawer-motion" title="Motion & Animation">
                 <i class="fa-solid fa-film"></i>
                 <span>Motion</span>
             </button>
-            <button class="rail-btn" data-target="drawer-backgrounds" title="Background Layer">
-                <i class="fa-solid fa-mountain-sun"></i>
-                <span>Backgrounds</span>
-            </button>
-            <button class="rail-btn" data-target="drawer-effects" title="Templates & Effects">
+            <button class="rail-btn" data-target="drawer-effects" title="Visual Effects & Presets">
                 <i class="fa-solid fa-wand-magic-sparkles"></i>
                 <span>Effects</span>
+            </button>
+            <button class="rail-btn" data-target="drawer-transitions" title="Scene & Lyric Transitions">
+                <i class="fa-solid fa-shuffle"></i>
+                <span>Transitions</span>
+            </button>
+            <button class="rail-btn" data-target="drawer-ai" title="AI Creative Director">
+                <i class="fa-solid fa-robot"></i>
+                <span>AI Studio</span>
             </button>
         </nav>
 
@@ -224,9 +235,124 @@
                 </div>
             </div>
 
-            <!-- Drawer Panel: Typography -->
-            <div class="drawer-panel" id="drawer-typography">
+            <!-- Drawer Panel: AI Creative Studio -->
+            <div class="drawer-panel" id="drawer-ai">
                 <div class="drawer-section">
+                    <span class="section-label">AI Creative Director</span>
+                    
+                    <!-- AI Status Banner -->
+                    <div class="ai-status-card" id="ai-status-banner">
+                        <div class="ai-status-left">
+                            <span class="ai-status-dot" id="ai-status-dot"></span>
+                            <div>
+                                <span class="ai-status-title" id="ai-status-title">Checking AI Status...</span>
+                                <span class="ai-status-desc" id="ai-status-subtitle">Detecting Gemini API configuration</span>
+                            </div>
+                        </div>
+                        <button class="btn btn-ghost btn-sm" onclick="Editor.openAISettingsModal()" title="Configure AI API Key">
+                            <i class="fa-solid fa-gear"></i> Setup
+                        </button>
+                    </div>
+
+                    <p style="font-size: 16px; color: var(--text-secondary); margin: 14px 0 18px 0; line-height: 1.5;">
+                        Automatically analyzes your song lyrics, acoustic rhythm, and artwork colors to propose custom typography, palettes, composition, and scene dynamics.
+                    </p>
+
+                    <button class="btn btn-primary" id="btn-run-ai-propose" onclick="Editor.runAIPropose()" style="width: 100%; justify-content: center; padding: 14px 20px;">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        <span>Generate Creative Direction</span>
+                    </button>
+
+                    <!-- Loading Indicator -->
+                    <div id="ai-loading-indicator" style="display: none; text-align: center; padding: 24px 12px;">
+                        <i class="fa-solid fa-compact-disc fa-spin" style="font-size: 32px; color: var(--accent-primary); margin-bottom: 12px;"></i>
+                        <p style="font-size: 16px; color: var(--text-primary); font-weight: 500;">Analyzing lyric tone & artwork palette...</p>
+                        <span style="font-size: 16px; color: var(--text-muted);">Synthesizing motion typography composition</span>
+                    </div>
+
+                    <!-- Proposal Results Container -->
+                    <div id="ai-proposal-results" style="display: none; margin-top: 24px;">
+                        <div class="ai-proposal-card">
+                            <div class="proposal-header">
+                                <div>
+                                    <span class="proposal-badge" id="ai-prop-badge">Signature Preset</span>
+                                    <h4 class="proposal-title" id="ai-prop-preset-name">Neon Night</h4>
+                                </div>
+                                <span class="proposal-engine-tag" id="ai-prop-provider">Gemini 2.5 Flash</span>
+                            </div>
+
+                            <p class="proposal-rationale" id="ai-prop-rationale"></p>
+
+                            <div class="proposal-section">
+                                <span class="proposal-sublabel">Recommended Palette</span>
+                                <div class="proposal-palette-row">
+                                    <div class="palette-swatch-item">
+                                        <div class="palette-circle" id="ai-color-text"></div>
+                                        <span>Text</span>
+                                    </div>
+                                    <div class="palette-swatch-item">
+                                        <div class="palette-circle" id="ai-color-highlight"></div>
+                                        <span>Accent</span>
+                                    </div>
+                                    <div class="palette-swatch-item">
+                                        <div class="palette-circle" id="ai-color-glow"></div>
+                                        <span>Glow</span>
+                                    </div>
+                                    <div class="palette-swatch-item">
+                                        <div class="palette-circle" id="ai-color-bg"></div>
+                                        <span>Backdrop</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="proposal-specs-grid">
+                                <div class="spec-pill">
+                                    <span class="spec-label">Typeface</span>
+                                    <span class="spec-value" id="ai-spec-font">Outfit</span>
+                                </div>
+                                <div class="spec-pill">
+                                    <span class="spec-label">Motion</span>
+                                    <span class="spec-value" id="ai-spec-motion">Beat-reactive pulse</span>
+                                </div>
+                                <div class="spec-pill">
+                                    <span class="spec-label">Position</span>
+                                    <span class="spec-value" id="ai-spec-pos">Center / 76% Y</span>
+                                </div>
+                                <div class="spec-pill">
+                                    <span class="spec-label">Letterbox</span>
+                                    <span class="spec-value" id="ai-spec-letterbox">Enabled</span>
+                                </div>
+                            </div>
+
+                            <div class="proposal-section" id="ai-scenes-section" style="margin-top: 16px;">
+                                <span class="proposal-sublabel">Scene Dynamic Transitions</span>
+                                <div id="ai-scenes-list" class="scenes-list"></div>
+                            </div>
+
+                            <button class="btn btn-primary" onclick="Editor.applyCurrentAIProposal()" style="width: 100%; justify-content: center; margin-top: 20px;">
+                                <i class="fa-solid fa-check"></i>
+                                <span>Apply Proposal to Project</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Drawer Panel: Text & Typography -->
+            <div class="drawer-panel" id="drawer-text">
+                <div class="drawer-section">
+                    <span class="section-label">Quick Add Text</span>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+                        <button class="btn btn-secondary" onclick="Editor.addPresetText('title')" style="justify-content: flex-start; height: 44px; padding: 0 12px;">
+                            <i class="fa-solid fa-heading" style="color: var(--accent-primary);"></i>
+                            <span>Headline</span>
+                        </button>
+                        <button class="btn btn-secondary" onclick="Editor.addPresetText('lyric')" style="justify-content: flex-start; height: 44px; padding: 0 12px;">
+                            <i class="fa-solid fa-align-left" style="color: var(--accent-cyan);"></i>
+                            <span>Lyric Line</span>
+                        </button>
+                    </div>
+
                     <span class="section-label">Typeface & Hierarchy</span>
                     
                     <div class="prop-row">
@@ -500,6 +626,30 @@
                             </div>
                             <p class="template-desc">Real-time progressive syllable wipe matching the singer's vocal delivery rhythm.</p>
                         </div>
+
+                        <!-- 8. Neon Night -->
+                        <div class="template-card" data-template-id="neon_night">
+                            <div class="template-card-preview" style="background: #05050e; display: flex; align-items: center; justify-content: center;">
+                                <span class="template-preview-text" style="color: #00F2FE; text-shadow: 0 0 16px #00F2FE, 0 0 32px #4FACFE; font-weight: 800;">NEON NIGHT</span>
+                            </div>
+                            <div class="template-card-header">
+                                <span class="template-title">8. Neon Night</span>
+                                <span class="badge badge-accent">Cyber Glow</span>
+                            </div>
+                            <p class="template-desc">Pulsing electric neon tubes with multi-stage chromatic outer bloom and vibrant stroke.</p>
+                        </div>
+
+                        <!-- 9. Retro Wave -->
+                        <div class="template-card" data-template-id="retro_wave">
+                            <div class="template-card-preview" style="background: #0E0514; display: flex; align-items: center; justify-content: center;">
+                                <span class="template-preview-text" style="color: #FFE57F; text-shadow: 0 0 14px #FF5500, 0 0 24px #FF007F; font-family: var(--font-mono); font-weight: 700;">RETRO WAVE</span>
+                            </div>
+                            <div class="template-card-header">
+                                <span class="template-title">9. Retro Wave</span>
+                                <span class="badge badge-warning">Synthwave</span>
+                            </div>
+                            <p class="template-desc">Nostalgic synthwave aesthetics with amber/magenta arcade glow and rhythmic type-on pacing.</p>
+                        </div>
                     </div>
 
                     <span class="section-label" style="margin-top: 24px;">Cinema Overlays</span>
@@ -518,6 +668,62 @@
                         </div>
                         <input type="checkbox" id="effect-visualizer-toggle" class="form-switch" onchange="Editor.toggleVisualizerEffect(this.checked)">
                     </div>
+                </div>
+            </div>
+
+            <!-- Drawer Panel: Transitions (IMG.LY CE.SDK inspired) -->
+            <div class="drawer-panel" id="drawer-transitions">
+                <div class="drawer-section">
+                    <span class="section-label">Scene & Lyric Transitions</span>
+                    <p style="font-size: 16px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.5;">
+                        Smoothly transition between lyric lines and background scenes using cinematic blend modes.
+                    </p>
+
+                    <div class="motion-presets-grid">
+                        <button class="motion-preset-chip active" data-transition="crossfade" onclick="Editor.setTransitionStyle('crossfade')">
+                            <span class="preset-name">Crossfade</span>
+                            <span class="preset-tag">Soft Dissolve</span>
+                        </button>
+                        <button class="motion-preset-chip" data-transition="wipe-left" onclick="Editor.setTransitionStyle('wipe-left')">
+                            <span class="preset-name">Wipe Left</span>
+                            <span class="preset-tag">Horizontal</span>
+                        </button>
+                        <button class="motion-preset-chip" data-transition="wipe-right" onclick="Editor.setTransitionStyle('wipe-right')">
+                            <span class="preset-name">Wipe Right</span>
+                            <span class="preset-tag">Cinematic</span>
+                        </button>
+                        <button class="motion-preset-chip" data-transition="zoom-pulse" onclick="Editor.setTransitionStyle('zoom-pulse')">
+                            <span class="preset-name">Zoom Pulse</span>
+                            <span class="preset-tag">Impact</span>
+                        </button>
+                        <button class="motion-preset-chip" data-transition="glitch" onclick="Editor.setTransitionStyle('glitch')">
+                            <span class="preset-name">Cyber Glitch</span>
+                            <span class="preset-tag">Anomalous</span>
+                        </button>
+                        <button class="motion-preset-chip" data-transition="blur-fade" onclick="Editor.setTransitionStyle('blur-fade')">
+                            <span class="preset-name">Rack Blur</span>
+                            <span class="preset-tag">Optical</span>
+                        </button>
+                    </div>
+
+                    <div class="prop-row" style="margin-top: 20px;">
+                        <label class="prop-label" for="prop-transition-duration">Transition Time (sec)</label>
+                        <input type="number" id="prop-transition-duration" class="form-control prop-input" min="0.1" max="1.5" step="0.05" value="0.35" onchange="Editor.setTransitionDuration(this.value)">
+                    </div>
+
+                    <div class="prop-row">
+                        <label class="prop-label" for="prop-transition-easing">Transition Easing</label>
+                        <select class="form-control form-select prop-input" id="prop-transition-easing" onchange="Editor.setTransitionEasing(this.value)">
+                            <option value="ease-out" selected>Ease Out (Natural)</option>
+                            <option value="ease-in-out">Ease In-Out (Silky)</option>
+                            <option value="linear">Linear (Mechanical)</option>
+                        </select>
+                    </div>
+
+                    <button class="btn btn-secondary" onclick="Editor.applyTransitionToAll()" style="width: 100%; justify-content: center; margin-top: 14px;">
+                        <i class="fa-solid fa-check-double"></i>
+                        <span>Apply Transition to All Lyric Cuts</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -584,8 +790,9 @@
             </div>
 
             <div class="inspector-content">
-                <!-- Inspector Tab: Layer (Lyric Text) -->
+                <!-- Inspector Tab: Layer (Placement, Typography, Styling & Illumination) -->
                 <div class="inspector-tab-panel active" id="itab-layer">
+                    <!-- Section 1: Placement & Geometry -->
                     <div class="prop-section">
                         <span class="prop-title"><i class="fa-solid fa-arrows-up-down-left-right"></i> Canvas Placement</span>
                         
@@ -606,30 +813,94 @@
                         </div>
                     </div>
 
+                    <!-- Section 2: Typography & Hierarchy -->
+                    <div class="prop-section">
+                        <span class="prop-title"><i class="fa-solid fa-font"></i> Typography & Layout</span>
+                        
+                        <div class="prop-row">
+                            <label class="prop-label" for="prop-font-family-ins">Font Family</label>
+                            <select class="form-control form-select prop-input" id="prop-font-family-ins" onchange="Editor.syncFontFamily(this.value)">
+                                <optgroup label="Editorial Serif">
+                                    <option value="'Playfair Display', serif" selected>Playfair Display</option>
+                                    <option value="'Cormorant Garamond', serif">Cormorant Garamond</option>
+                                    <option value="'Fraunces', serif">Fraunces</option>
+                                    <option value="'Cinzel', serif">Cinzel</option>
+                                </optgroup>
+                                <optgroup label="Modern Sans & Grotesk">
+                                    <option value="'Geist', sans-serif">Geist</option>
+                                    <option value="'Inter', sans-serif">Inter</option>
+                                    <option value="'Outfit', sans-serif">Outfit</option>
+                                    <option value="'Space Grotesk', sans-serif">Space Grotesk</option>
+                                    <option value="'Syne', sans-serif">Syne</option>
+                                </optgroup>
+                                <optgroup label="Monospace">
+                                    <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
+                                </optgroup>
+                            </select>
+                        </div>
+
+                        <div class="prop-row">
+                            <label class="prop-label" for="prop-font-size-slider-ins">Font Size (Canvas pt)</label>
+                            <div class="slider-row">
+                                <input type="range" id="prop-font-size-slider-ins" class="prop-range-slider" min="20" max="120" value="48" oninput="Editor.updateFontSize(this.value)">
+                                <span class="slider-val-badge" id="ins-fontsize-badge">48pt</span>
+                            </div>
+                        </div>
+
+                        <div class="prop-row">
+                            <label class="prop-label" for="prop-font-weight-ins">Font Weight</label>
+                            <select class="form-control form-select prop-input" id="prop-font-weight-ins" onchange="Editor.syncFontWeight(this.value)">
+                                <option value="400">Regular (400)</option>
+                                <option value="500">Medium (500)</option>
+                                <option value="600">SemiBold (600)</option>
+                                <option value="700" selected>Bold (700)</option>
+                                <option value="800">ExtraBold (800)</option>
+                            </select>
+                        </div>
+
+                        <div class="prop-row">
+                            <label class="prop-label" for="prop-letter-spacing-slider-ins">Tracking / Spacing</label>
+                            <div class="slider-row">
+                                <input type="range" id="prop-letter-spacing-slider-ins" class="prop-range-slider" min="0" max="14" step="0.5" value="3.0" oninput="Editor.updateLetterSpacing(this.value)">
+                                <span class="slider-val-badge" id="tracking-val-badge-ins">3.0px</span>
+                            </div>
+                        </div>
+
+                        <div class="prop-row">
+                            <label class="prop-label">Alignment</label>
+                            <div class="btn-group-segmented">
+                                <button class="seg-btn" data-align="left" onclick="Editor.setTextAlign('left')"><i class="fa-solid fa-align-left"></i> Left</button>
+                                <button class="seg-btn active" data-align="center" onclick="Editor.setTextAlign('center')"><i class="fa-solid fa-align-center"></i> Center</button>
+                                <button class="seg-btn" data-align="right" onclick="Editor.setTextAlign('right')"><i class="fa-solid fa-align-right"></i> Right</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 3: Text Styling & Illumination -->
                     <div class="prop-section">
                         <span class="prop-title"><i class="fa-solid fa-palette"></i> Text Styling & Illumination</span>
                         
                         <div class="prop-row">
                             <label class="prop-label" for="prop-text-color">Primary Text Fill</label>
                             <div class="color-picker-wrap">
-                                <input type="color" id="prop-text-color" class="prop-color-input" value="#F1EFEA">
-                                <span class="color-hex-label" id="text-color-hex">#F1EFEA</span>
+                                <input type="color" id="prop-text-color" class="prop-color-input" value="#F5F8FA">
+                                <span class="color-hex-label" id="text-color-hex">#F5F8FA</span>
                             </div>
                         </div>
 
                         <div class="prop-row">
-                            <label class="prop-label" for="prop-highlight-color">Highlight / Wipe Color</label>
+                            <label class="prop-label" for="prop-highlight-color">Highlight / Wipe Accent</label>
                             <div class="color-picker-wrap">
-                                <input type="color" id="prop-highlight-color" class="prop-color-input" value="#A994FF">
-                                <span class="color-hex-label" id="highlight-color-hex">#A994FF</span>
+                                <input type="color" id="prop-highlight-color" class="prop-color-input" value="#B6FF3B">
+                                <span class="color-hex-label" id="highlight-color-hex">#B6FF3B</span>
                             </div>
                         </div>
 
                         <div class="prop-row">
                             <label class="prop-label" for="prop-outline-color">Outline Stroke</label>
                             <div class="color-picker-wrap">
-                                <input type="color" id="prop-outline-color" class="prop-color-input" value="#090909">
-                                <span class="color-hex-label" id="outline-color-hex">#090909</span>
+                                <input type="color" id="prop-outline-color" class="prop-color-input" value="#0C1A2B">
+                                <span class="color-hex-label" id="outline-color-hex">#0C1A2B</span>
                             </div>
                         </div>
 
@@ -644,8 +915,8 @@
                         <div class="prop-row">
                             <label class="prop-label" for="prop-glow-color">Glow Bloom Color</label>
                             <div class="color-picker-wrap">
-                                <input type="color" id="prop-glow-color" class="prop-color-input" value="#A994FF">
-                                <span class="color-hex-label" id="glow-color-hex">#A994FF</span>
+                                <input type="color" id="prop-glow-color" class="prop-color-input" value="#B6FF3B">
+                                <span class="color-hex-label" id="glow-color-hex">#B6FF3B</span>
                             </div>
                         </div>
 
@@ -659,10 +930,11 @@
                     </div>
                 </div>
 
-                <!-- Inspector Tab: Motion -->
+                <!-- Inspector Tab: Motion (Preset, Speed, Easing, Audio Pulse) -->
                 <div class="inspector-tab-panel" id="itab-motion">
+                    <!-- Section 1: Animation Preset & Direction -->
                     <div class="prop-section">
-                        <span class="prop-title"><i class="fa-solid fa-film"></i> Animation Preset & Easing</span>
+                        <span class="prop-title"><i class="fa-solid fa-film"></i> Animation Preset & Timing</span>
 
                         <div class="prop-row">
                             <label class="prop-label" for="prop-animation-type">Motion Style</label>
@@ -692,7 +964,7 @@
                             </select>
                         </div>
 
-                        <div class="effect-toggle-card" style="margin-top: 16px;">
+                        <div class="effect-toggle-card" style="margin-top: 8px;">
                             <div class="effect-info">
                                 <span class="effect-title">Audio Beat Pulse</span>
                                 <span class="effect-desc">Reactive rhythmic bounce on energetic audio beats</span>
@@ -700,12 +972,45 @@
                             <input type="checkbox" id="effect-beat-pulse" class="form-switch" checked onchange="Editor.toggleBeatPulse(this.checked)">
                         </div>
                     </div>
+
+                    <!-- Section 2: Motion Easing Dynamics -->
+                    <div class="prop-section">
+                        <span class="prop-title"><i class="fa-solid fa-wave-square"></i> Easing & Curves</span>
+
+                        <div class="prop-row">
+                            <label class="prop-label" for="prop-animation-easing">Easing Curve</label>
+                            <select class="form-control form-select prop-input" id="prop-animation-easing">
+                                <option value="cubic-bezier(0.16, 1, 0.3, 1)" selected>Ease Out Expo (Snappy)</option>
+                                <option value="cubic-bezier(0.4, 0, 0.2, 1)">Smooth Sine (Cinematic)</option>
+                                <option value="cubic-bezier(0.34, 1.56, 0.64, 1)">Elastic Bounce (Pop)</option>
+                                <option value="linear">Linear Constant</option>
+                            </select>
+                        </div>
+
+                        <div class="prop-row">
+                            <label class="prop-label" for="prop-animation-intensity">Motion Magnitude</label>
+                            <select class="form-control form-select prop-input" id="prop-animation-intensity">
+                                <option value="subtle">Subtle (0.5x)</option>
+                                <option value="standard" selected>Standard (1.0x)</option>
+                                <option value="dramatic">Dramatic (1.5x)</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Inspector Tab: Background -->
+                <!-- Inspector Tab: Backdrop (Framing, Geometry, Atmosphere & Filters) -->
                 <div class="inspector-tab-panel" id="itab-background">
+                    <!-- Section 1: Framing & Geometry -->
                     <div class="prop-section">
                         <span class="prop-title"><i class="fa-solid fa-mountain-sun"></i> Background Framing</span>
+
+                        <div class="prop-row">
+                            <label class="prop-label" for="prop-bg-fit-ins">Image Fit Mode</label>
+                            <select class="form-control form-select prop-input" id="prop-bg-fit-ins" onchange="Editor.syncBgFit(this.value)">
+                                <option value="cover" selected>Cover (Proportional Fill)</option>
+                                <option value="contain">Contain (Letterboxed)</option>
+                            </select>
+                        </div>
 
                         <div class="prop-row">
                             <label class="prop-label" for="prop-bg-pan-x">Horizontal Pan (%)</label>
@@ -730,26 +1035,65 @@
                                 <span class="slider-val-badge" id="rotation-val-badge">0°</span>
                             </div>
                         </div>
+
+                        <div class="prop-row">
+                            <label class="prop-label" for="prop-bg-zoom-ins">Ken Burns Dynamic Zoom</label>
+                            <select class="form-control form-select prop-input" id="prop-bg-zoom-ins" onchange="Editor.syncBgZoom(this.value)">
+                                <option value="zoom-in" selected>Slow Push In (+8%)</option>
+                                <option value="zoom-out">Slow Pull Out (-8%)</option>
+                                <option value="none">Static (No Drift)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Section 2: Atmosphere & Lighting -->
+                    <div class="prop-section">
+                        <span class="prop-title"><i class="fa-solid fa-sliders"></i> Atmosphere & Lighting</span>
+
+                        <div class="prop-row">
+                            <label class="prop-label" for="prop-overlay-opacity-ins">Overlay Dimming</label>
+                            <div class="slider-row">
+                                <input type="range" id="prop-overlay-opacity-ins" class="prop-range-slider" min="0" max="0.9" step="0.05" value="0.38" oninput="Editor.syncOverlayOpacity(this.value)">
+                                <span class="slider-val-badge" id="overlay-val-badge-ins">38%</span>
+                            </div>
+                        </div>
+
+                        <div class="prop-row">
+                            <label class="prop-label" for="prop-bg-blur-ins">Atmospheric Blur</label>
+                            <div class="slider-row">
+                                <input type="range" id="prop-bg-blur-ins" class="prop-range-slider" min="0" max="25" value="0" oninput="Editor.syncBgBlur(this.value)">
+                                <span class="slider-val-badge" id="blur-val-badge-ins">0px</span>
+                            </div>
+                        </div>
+
+                        <div class="prop-row">
+                            <label class="prop-label" for="prop-bg-color-ins">Backdrop Tint Color</label>
+                            <div class="color-picker-wrap">
+                                <input type="color" id="prop-bg-color-ins" class="prop-color-input" value="#0C1A2B" oninput="Editor.setBackgroundColor(this.value)">
+                                <span class="color-hex-label" id="bg-color-hex-ins">#0C1A2B</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Inspector Tab: Composition -->
+                <!-- Inspector Tab: Composition (Project Specs & Sync Calibration) -->
                 <div class="inspector-tab-panel" id="itab-composition">
+                    <!-- Section 1: Project Canvas & Format -->
                     <div class="prop-section">
                         <span class="prop-title"><i class="fa-solid fa-sliders"></i> Project Composition</span>
 
                         <div class="audio-info-box">
                             <div class="audio-info-row">
-                                <span>Format</span>
-                                <span id="comp-aspect-badge">{{ project.aspect_ratio }}</span>
+                                <span>Aspect Format</span>
+                                <span id="comp-aspect-badge" style="color: var(--accent-primary); font-weight: 600;">{{ project.aspect_ratio }}</span>
                             </div>
                             <div class="audio-info-row">
                                 <span>Canvas Width</span>
-                                <span>{{ project.width }} px</span>
+                                <span id="comp-width-val">{{ project.width }} px</span>
                             </div>
                             <div class="audio-info-row">
                                 <span>Canvas Height</span>
-                                <span>{{ project.height }} px</span>
+                                <span id="comp-height-val">{{ project.height }} px</span>
                             </div>
                             <div class="audio-info-row">
                                 <span>Export Frame Rate</span>
@@ -757,7 +1101,32 @@
                             </div>
                             <div class="audio-info-row">
                                 <span>Total Duration</span>
-                                <span>{{ "%d:%02d" % ((project.audio_asset.duration / 60)|int, (project.audio_asset.duration % 60)|int) if project.audio_asset else '0:00' }}</span>
+                                <span>{{ "%d:%02d" % ((project.audio_asset.duration / 60)|int, (project.audio_asset.duration % 60)|int) if project.audio_asset else '0:30' }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 2: Audio & Subtitle Sync -->
+                    <div class="prop-section">
+                        <span class="prop-title"><i class="fa-solid fa-bolt"></i> Calibration & Subtitle Engine</span>
+
+                        <div class="prop-row">
+                            <label class="prop-label" for="prop-sync-offset">Audio Sync Offset (ms)</label>
+                            <div class="slider-row">
+                                <input type="range" id="prop-sync-offset" class="prop-range-slider" min="-500" max="500" step="10" value="0" oninput="Editor.updateSyncOffset(this.value)">
+                                <span class="slider-val-badge" id="sync-offset-badge">0 ms</span>
+                            </div>
+                            <span class="prop-hint" style="font-size: 16px; color: var(--text-muted); margin-top: 4px;">Fine-tune lyric cue timing against audio playback latency</span>
+                        </div>
+
+                        <div class="audio-info-box" style="margin-top: 8px;">
+                            <div class="audio-info-row">
+                                <span>Rendering Engine</span>
+                                <span style="color: var(--accent-primary);">Canvas2D + Web Audio</span>
+                            </div>
+                            <div class="audio-info-row">
+                                <span>Subtitle Engine</span>
+                                <span>SSA/ASS Karaoke</span>
                             </div>
                         </div>
                     </div>
@@ -894,8 +1263,11 @@
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary" onclick="closeModal('export-modal')">Cancel</button>
+            <button class="btn btn-secondary" onclick="Editor.startClientSideCanvasExport()" title="Instant canvas recording directly in browser">
+                <i class="fa-solid fa-video"></i> Instant Browser Export
+            </button>
             <button class="btn btn-primary btn-export" onclick="Editor.startVideoRender()">
-                <i class="fa-solid fa-film"></i> Start Render
+                <i class="fa-solid fa-film"></i> Master FFmpeg Render
             </button>
         </div>
     </div>
@@ -916,6 +1288,74 @@
                 <h4 style="margin-bottom: 8px; font-size: 18px; font-weight: 600;">Dispatching job...</h4>
                 <p style="font-size: 16px; color: var(--text-secondary);">Preparing FFmpeg subtitle compositor</p>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI & Integration Settings Modal -->
+<div class="modal-backdrop" id="ai-settings-modal">
+    <div class="modal-window" style="max-width: 580px;">
+        <div class="modal-header">
+            <h3>AI Studio & Integration Settings</h3>
+            <button class="btn-icon" onclick="closeModal('ai-settings-modal')" title="Close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <!-- Google Gemini API Section -->
+            <div class="settings-section-card">
+                <div class="settings-card-header">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class="fa-solid fa-wand-magic-sparkles" style="color: var(--accent-primary); font-size: 20px;"></i>
+                        <span style="font-weight: 600; font-size: 18px;">Google Gemini API</span>
+                    </div>
+                    <span class="badge" id="modal-gemini-badge">Checking...</span>
+                </div>
+                <p style="font-size: 16px; color: var(--text-secondary); margin: 10px 0 16px 0; line-height: 1.5;">
+                    LyricStudio uses Gemini 2.5 Flash for multimodal lyric analysis, intelligent composition proposals, and neural vocal transcription.
+                </p>
+
+                <div class="prop-row">
+                    <label class="prop-label" for="setting-gemini-key">Gemini API Key</label>
+                    <div style="display: flex; gap: 8px; width: 100%;">
+                        <input type="password" id="setting-gemini-key" class="form-control" placeholder="AIzaSy..." style="flex: 1; font-size: 16px;">
+                        <button class="btn btn-secondary" onclick="Editor.togglePasswordVisibility('setting-gemini-key')" type="button">
+                            <i class="fa-regular fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; flex-wrap: wrap; gap: 8px;">
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style="font-size: 16px; color: var(--accent-primary); text-decoration: none;">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i> Get free Gemini API Key
+                    </a>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-secondary" onclick="Editor.testGeminiKey()">Test</button>
+                        <button class="btn btn-primary" onclick="Editor.saveGeminiKey()">Save Key</button>
+                    </div>
+                </div>
+                <div id="gemini-test-feedback" style="margin-top: 12px; font-size: 16px; display: none;"></div>
+            </div>
+
+            <!-- Supabase Authentication Section -->
+            <div class="settings-section-card" style="margin-top: 20px;">
+                <div class="settings-card-header">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class="fa-solid fa-shield-halved" style="color: var(--color-success); font-size: 20px;"></i>
+                        <span style="font-weight: 600; font-size: 18px;">Authentication & Storage</span>
+                    </div>
+                    <span class="badge badge-success">Active Session</span>
+                </div>
+                <p style="font-size: 16px; color: var(--text-secondary); margin: 10px 0 12px 0; line-height: 1.5;">
+                    User sessions, private projects, and uploads are securely isolated and persisted in the local studio vault.
+                </p>
+                <div style="font-size: 16px; color: var(--text-muted);">
+                    Logged in as: <strong style="color: var(--text-primary);">{{ session.get('username', 'Owner') }}</strong>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('ai-settings-modal')">Close</button>
         </div>
     </div>
 </div>

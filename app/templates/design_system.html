@@ -88,8 +88,8 @@
         <div class="nav-left">
             <a href="{{ url_for('dashboard.index') }}" class="nav-brand">
                 <svg width="24" height="24" viewBox="0 0 32 32" fill="none" class="brand-mark">
-                    <rect width="32" height="32" rx="7" fill="#171717" stroke="rgba(169, 148, 255, 0.4)" stroke-width="1.2"/>
-                    <path d="M8 19V13M12 23V9M16 26V6M20 21V11M24 18V14" stroke="#A994FF" stroke-width="2.4" stroke-linecap="round"/>
+                    <rect width="32" height="32" rx="8" fill="#000000" stroke="#FF5454" stroke-width="1.2"/>
+                    <path d="M8 19V13M12 23V9M16 26V6M20 21V11M24 18V14" stroke="#FF5454" stroke-width="2.4" stroke-linecap="round"/>
                 </svg>
                 <span class="brand-name">LyricStudio</span>
             </a>
@@ -271,58 +271,72 @@
         <section id="colors" class="ds-section">
             <div class="ds-section-header">
                 <h2 class="ds-section-title">3. Color Palette</h2>
-                <p class="ds-section-desc">Restrained palette avoiding saturated rainbow cards: near-black, layered charcoal, warm white, and a single lavender accent.</p>
+                <p class="ds-section-desc">Design system inspired by VEED (DESIGN.md): pure black canvas (#000000), energetic coral-red accent (#FF5454), soft cream on-primary (#FAFAF9), dark surfaces (#0C0A09, #141414), secondary neutral (#333333), and trusted links (#3C6300).</p>
             </div>
 
             <div class="ds-card">
-                <h3 class="ds-card-title">Studio Core Tones</h3>
+                <h3 class="ds-card-title">Studio Signature Palette</h3>
                 <div class="ds-grid-4">
                     <div class="ds-swatch">
-                        <div class="ds-swatch-color" style="background: #090909; border-bottom: 1px solid #262626;"></div>
+                        <div class="ds-swatch-color" style="background: #000000; border-bottom: 1px solid #222222;"></div>
                         <div class="ds-swatch-info">
-                            <span class="ds-swatch-name">Obsidian Black</span>
-                            <span class="ds-swatch-value">#090909</span>
+                            <span class="ds-swatch-name">Canvas Void</span>
+                            <span class="ds-swatch-value">#000000</span>
                         </div>
                     </div>
                     <div class="ds-swatch">
-                        <div class="ds-swatch-color" style="background: #171717; border-bottom: 1px solid #262626;"></div>
+                        <div class="ds-swatch-color" style="background: #FF5454;"></div>
                         <div class="ds-swatch-info">
-                            <span class="ds-swatch-name">Dark Charcoal</span>
-                            <span class="ds-swatch-value">#171717</span>
+                            <span class="ds-swatch-name">Primary Accent</span>
+                            <span class="ds-swatch-value">#FF5454</span>
                         </div>
                     </div>
                     <div class="ds-swatch">
-                        <div class="ds-swatch-color" style="background: #F1EFEA;"></div>
+                        <div class="ds-swatch-color" style="background: #FAFAF9; border-bottom: 1px solid #333333;"></div>
                         <div class="ds-swatch-info">
-                            <span class="ds-swatch-name">Warm White Text</span>
-                            <span class="ds-swatch-value">#F1EFEA</span>
+                            <span class="ds-swatch-name">On-Primary Cream</span>
+                            <span class="ds-swatch-value">#FAFAF9</span>
                         </div>
                     </div>
                     <div class="ds-swatch">
-                        <div class="ds-swatch-color" style="background: #A994FF;"></div>
+                        <div class="ds-swatch-color" style="background: #0C0A09; border-bottom: 1px solid #222222;"></div>
                         <div class="ds-swatch-info">
-                            <span class="ds-swatch-name">Restrained Lavender</span>
-                            <span class="ds-swatch-value">#A994FF</span>
+                            <span class="ds-swatch-name">Surface Dark</span>
+                            <span class="ds-swatch-value">#0C0A09</span>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="ds-card">
-                <h3 class="ds-card-title">Secondary Contrast & Semantics</h3>
+                <h3 class="ds-card-title">Secondary Contrast & Neutrals</h3>
                 <div class="ds-grid-4">
                     <div class="ds-swatch">
-                        <div class="ds-swatch-color" style="background: #8E8C99;"></div>
+                        <div class="ds-swatch-color" style="background: #141414; border-bottom: 1px solid #333333;"></div>
                         <div class="ds-swatch-info">
-                            <span class="ds-swatch-name">Muted Lavender Slate</span>
-                            <span class="ds-swatch-value">#8E8C99</span>
+                            <span class="ds-swatch-name">Surface Raised</span>
+                            <span class="ds-swatch-value">#141414</span>
                         </div>
                     </div>
                     <div class="ds-swatch">
-                        <div class="ds-swatch-color" style="background: #262626;"></div>
+                        <div class="ds-swatch-color" style="background: #333333; border-bottom: 1px solid #444444;"></div>
                         <div class="ds-swatch-info">
-                            <span class="ds-swatch-name">Fine Hairline Border</span>
-                            <span class="ds-swatch-value">#262626</span>
+                            <span class="ds-swatch-name">Neutral-1 Secondary</span>
+                            <span class="ds-swatch-value">#333333</span>
+                        </div>
+                    </div>
+                    <div class="ds-swatch">
+                        <div class="ds-swatch-color" style="background: #3C6300;"></div>
+                        <div class="ds-swatch-info">
+                            <span class="ds-swatch-name">Link Green</span>
+                            <span class="ds-swatch-value">#3C6300</span>
+                        </div>
+                    </div>
+                    <div class="ds-swatch">
+                        <div class="ds-swatch-color" style="background: #9FD356;"></div>
+                        <div class="ds-swatch-info">
+                            <span class="ds-swatch-name">Accent Lime</span>
+                            <span class="ds-swatch-value">#9FD356</span>
                         </div>
                     </div>
                     <div class="ds-swatch">

@@ -13,8 +13,8 @@
         <div class="nav-left">
             <a href="{{ url_for('dashboard.index') }}" class="nav-brand">
                 <svg width="22" height="22" viewBox="0 0 32 32" fill="none" class="brand-mark">
-                    <rect width="32" height="32" rx="6" fill="#1D1D1D"/>
-                    <path d="M8 19V13M12 23V9M16 26V6M20 21V11M24 18V14" stroke="#7C5CFC" stroke-width="2.2" stroke-linecap="round"/>
+                    <rect width="32" height="32" rx="8" fill="#0C1A2B" stroke="#B6FF3B" stroke-width="1.2"/>
+                    <path d="M8 19V13M12 23V9M16 26V6M20 21V11M24 18V14" stroke="#B6FF3B" stroke-width="2.2" stroke-linecap="round"/>
                 </svg>
                 <span class="brand-name">LyricStudio</span>
             </a>
@@ -22,6 +22,7 @@
             <nav class="nav-links">
                 <a href="{{ url_for('dashboard.index') }}" class="nav-link active">Projects</a>
                 <a href="{{ url_for('dashboard.design_system') }}" class="nav-link">Design System</a>
+                <a href="#" onclick="openDashboardAISettings(); return false;" class="nav-link"><i class="fa-solid fa-gear"></i> AI & Integrations</a>
             </nav>
         </div>
 
@@ -150,6 +151,74 @@
             <button class="btn btn-primary" onclick="submitCreateProject()">
                 Create project
             </button>
+        </div>
+    </div>
+</div>
+
+<!-- AI & Integration Settings Modal -->
+<div class="modal-backdrop" id="ai-settings-modal">
+    <div class="modal-window" style="max-width: 580px;">
+        <div class="modal-header">
+            <h3>AI Studio & Integration Settings</h3>
+            <button class="btn-icon" onclick="closeModal('ai-settings-modal')" title="Close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <!-- Google Gemini API Section -->
+            <div class="settings-section-card" style="background: var(--surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: var(--space-4);">
+                <div class="settings-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class="fa-solid fa-wand-magic-sparkles" style="color: var(--accent-primary); font-size: 20px;"></i>
+                        <span style="font-weight: 600; font-size: 18px;">Google Gemini API</span>
+                    </div>
+                    <span class="badge" id="modal-gemini-badge">Checking...</span>
+                </div>
+                <p style="font-size: 16px; color: var(--text-secondary); margin: 10px 0 16px 0; line-height: 1.5;">
+                    LyricStudio uses Gemini 2.5 Flash for multimodal lyric analysis, intelligent composition proposals, and neural vocal transcription.
+                </p>
+
+                <div class="prop-row" style="display: flex; flex-direction: column; gap: 6px;">
+                    <label class="prop-label" for="setting-gemini-key" style="font-size: 16px; color: var(--text-secondary); font-weight: 500;">Gemini API Key</label>
+                    <div style="display: flex; gap: 8px; width: 100%;">
+                        <input type="password" id="setting-gemini-key" class="form-control" placeholder="AIzaSy..." style="flex: 1; font-size: 16px;">
+                        <button class="btn btn-secondary" onclick="togglePasswordVisibility('setting-gemini-key')" type="button">
+                            <i class="fa-regular fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; flex-wrap: wrap; gap: 8px;">
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style="font-size: 16px; color: var(--accent-primary); text-decoration: none;">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i> Get free Gemini API Key
+                    </a>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-secondary" onclick="testGeminiKey()">Test</button>
+                        <button class="btn btn-primary" onclick="saveGeminiKey()">Save Key</button>
+                    </div>
+                </div>
+                <div id="gemini-test-feedback" style="margin-top: 12px; font-size: 16px; display: none;"></div>
+            </div>
+
+            <!-- Supabase Authentication Section -->
+            <div class="settings-section-card" style="margin-top: 20px; background: var(--surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: var(--space-4);">
+                <div class="settings-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class="fa-solid fa-shield-halved" style="color: var(--color-success); font-size: 20px;"></i>
+                        <span style="font-weight: 600; font-size: 18px;">Authentication & Storage</span>
+                    </div>
+                    <span class="badge badge-success">Active Session</span>
+                </div>
+                <p style="font-size: 16px; color: var(--text-secondary); margin: 10px 0 12px 0; line-height: 1.5;">
+                    User sessions, private projects, and uploads are securely isolated and persisted in the local studio vault.
+                </p>
+                <div style="font-size: 16px; color: var(--text-muted);">
+                    Logged in as: <strong style="color: var(--text-primary);">{{ username }}</strong>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('ai-settings-modal')">Close</button>
         </div>
     </div>
 </div>

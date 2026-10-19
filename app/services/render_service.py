@@ -18,6 +18,19 @@ class RenderService:
     _active_processes: dict[str, subprocess.Popen] = {}
     _worker_thread = None
     _lock = threading.Lock()
+    _ass_filter_supported = None
+
+    @classmethod
+    def has_ass_filter(cls) -> bool:
+        if cls._ass_filter_supported is not None:
+            return cls._ass_filter_supported
+        try:
+            res = subprocess.run([Config.FFMPEG_BINARY, "-filters"], capture_output=True, text=True, timeout=5)
+            cls._ass_filter_supported = bool(re.search(r"\b(ass|subtitles)\b", res.stdout))
+        except Exception as e:
+            logger.warning("Error checking FFmpeg filters: %s", e)
+            cls._ass_filter_supported = False
+        return cls._ass_filter_supported
 
     @classmethod
     def start_worker(cls):
@@ -240,6 +253,154 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         output_path.write_text(ass_content, encoding="utf-8")
 
     @classmethod
+    def generate_pillow_overlay_stream(cls, lyrics_data: list[dict], template: dict, width: int, height: int, temp_dir: Path, total_duration: float) -> Path:
+        """
+        Creates crisp, high-definition transparent PNG frames for each lyric segment using Pillow
+        and generates an FFmpeg concat demuxer file for seamless, 100% reliable overlay rendering.
+        """
+        from PIL import Image, ImageDraw, ImageFont, ImageFilter
+
+        # 1. Blank transparent baseline frame
+        blank_img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        blank_path = temp_dir / "blank.png"
+        blank_img.save(blank_path, format="PNG")
+
+        # Resolve typography
+        font_family = str(template.get("font_family", "sans-serif")).lower()
+        font_size = max(18, int(template.get("font_size", 48) * (height / 1080.0)))
+        font_weight = str(template.get("font_weight", "bold")).lower()
+        template_id = str(template.get("template_id", "cinematic")).lower()
+
+        candidate_paths = []
+        if "serif" in font_family or template_id in ("editorial_serif", "midnight_cinema", "cinematic"):
+            candidate_paths = [
+                "/System/Library/Fonts/Supplemental/Georgia.ttf",
+                "/System/Library/Fonts/Supplemental/Times New Roman.ttf",
+                "/System/Library/Fonts/Times.ttc"
+            ]
+        elif "mono" in font_family or template_id in ("retro_arcade", "retro"):
+            candidate_paths = [
+                "/System/Library/Fonts/Supplemental/Courier New.ttf",
+                "/System/Library/Fonts/Monaco.ttf",
+                "/System/Library/Fonts/Menlo.ttc"
+            ]
+        else:
+            candidate_paths = [
+                "/System/Library/Fonts/Supplemental/Arial Bold.ttf" if ("bold" in font_weight or "700" in font_weight or "800" in font_weight) else "/System/Library/Fonts/Supplemental/Arial.ttf",
+                "/System/Library/Fonts/Helvetica.ttc",
+                "/System/Library/Fonts/Supplemental/Trebuchet MS.ttf",
+                "/System/Library/Fonts/SFCompact.ttf"
+            ]
+
+        selected_font = next((p for p in candidate_paths if Path(p).exists()), None)
+        try:
+            if selected_font:
+                font = ImageFont.truetype(selected_font, font_size)
+            else:
+                font = ImageFont.load_default(size=font_size)
+        except Exception:
+            font = ImageFont.load_default()
+
+        # Parse styling colors
+        text_color_hex = template.get("text_color", "#F1EFEA")
+        highlight_color_hex = template.get("highlight_color", "#A994FF")
+        glow_color_hex = template.get("glow_color", "#A994FF")
+
+        pos_y_pct = float(template.get("position_y", 76)) / 100.0
+        pos_y = int(height * pos_y_pct)
+        pos_x_pct = float(template.get("position_x", 50)) / 100.0
+        pos_x = int(width * pos_x_pct)
+
+        text_align = template.get("text_align", "center")
+        anchor = "mm" if text_align == "center" else ("lm" if text_align == "left" else "rm")
+        if text_align == "left":
+            pos_x = int(width * 0.12)
+        elif text_align == "right":
+            pos_x = int(width * 0.88)
+
+        def hex_to_rgba(h, alpha=255):
+            if not h:
+                return (255, 255, 255, alpha)
+            clean = str(h).strip().lstrip("#")
+            if len(clean) == 6:
+                return (int(clean[0:2], 16), int(clean[2:4], 16), int(clean[4:6], 16), alpha)
+            elif len(clean) == 8:
+                return (int(clean[0:2], 16), int(clean[2:4], 16), int(clean[4:6], 16), int(clean[6:8], 16))
+            return (255, 255, 255, alpha)
+
+        text_rgba = hex_to_rgba(text_color_hex, 255)
+        glow_rgba = hex_to_rgba(glow_color_hex, 210)
+        outline_rgba = hex_to_rgba(template.get("outline_color", "#090909"), 240)
+        outline_w = max(0, int(template.get("outline_width", 2) * (height / 1080.0)))
+
+        valid_lines = [l for l in lyrics_data if l.get("text", "").strip()]
+        valid_lines.sort(key=lambda x: float(x.get("start", 0.0)))
+
+        slides_info = []
+        current_time = 0.0
+
+        for idx, line in enumerate(valid_lines):
+            l_start = max(0.0, float(line.get("start", 0.0)))
+            l_end = max(l_start + 0.3, float(line.get("end", l_start + 3.0)))
+            if l_end > total_duration:
+                l_end = total_duration
+
+            if l_start > current_time + 0.04:
+                gap = l_start - current_time
+                slides_info.append(("blank.png", round(gap, 3)))
+                current_time = l_start
+
+            line_img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+            draw = ImageDraw.Draw(line_img)
+            raw_text = line.get("text", "").strip()
+
+            # Atmospheric or neon glow layer
+            if template_id in ("neon_night", "neon", "dream_sequence", "dreamy", "soft_focus", "atmospheric"):
+                glow_canvas = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+                g_draw = ImageDraw.Draw(glow_canvas)
+                g_stroke = max(3, int(6 * (height / 1080.0)))
+                g_draw.text((pos_x, pos_y), raw_text, font=font, fill=glow_rgba, anchor=anchor, stroke_width=g_stroke, stroke_fill=glow_rgba)
+                blur_radius = max(3, int(14 * (height / 1080.0)))
+                glow_canvas = glow_canvas.filter(ImageFilter.GaussianBlur(blur_radius))
+                line_img = Image.alpha_composite(line_img, glow_canvas)
+                draw = ImageDraw.Draw(line_img)
+
+            # Drop shadow
+            shadow_off = max(2, int(4 * (height / 1080.0)))
+            draw.text((pos_x + shadow_off, pos_y + shadow_off), raw_text, font=font, fill=(0, 0, 0, 200), anchor=anchor)
+
+            # Outline and primary text
+            if outline_w > 0:
+                draw.text((pos_x, pos_y), raw_text, font=font, fill=text_rgba, anchor=anchor, stroke_width=outline_w, stroke_fill=outline_rgba)
+            else:
+                draw.text((pos_x, pos_y), raw_text, font=font, fill=text_rgba, anchor=anchor)
+
+            line_filename = f"lyric_{idx:03d}.png"
+            line_img.save(temp_dir / line_filename, format="PNG")
+
+            dur = max(0.1, round(l_end - l_start, 3))
+            slides_info.append((line_filename, dur))
+            current_time = l_end
+
+        # Trailing silence
+        if current_time < total_duration:
+            trailing = max(0.1, round(total_duration - current_time, 3))
+            slides_info.append(("blank.png", trailing))
+
+        if not slides_info:
+            slides_info.append(("blank.png", max(1.0, round(total_duration, 3))))
+
+        concat_path = temp_dir / "lyrics_concat.txt"
+        concat_lines = []
+        for fname, dur in slides_info:
+            concat_lines.append(f"file '{fname}'")
+            concat_lines.append(f"duration {dur}")
+        concat_lines.append(f"file '{slides_info[-1][0]}'")
+
+        concat_path.write_text("\n".join(concat_lines) + "\n", encoding="utf-8")
+        return concat_path
+
+    @classmethod
     def _execute_render_task(cls, task: dict):
         job_id = task["job_id"]
         project = task["project_data"]
@@ -269,11 +430,12 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             if total_duration <= 0:
                 total_duration = 30.0
 
-            # Generate ASS subtitles
+            # Subtitle & Typography Strategy
             template = project.get("template_data", {})
             lyrics = project.get("lyrics_data", [])
             ass_path = temp_dir / "subtitles.ass"
-            cls.generate_ass_subtitles(lyrics, template, width, height, ass_path)
+            if cls.has_ass_filter():
+                cls.generate_ass_subtitles(lyrics, template, width, height, ass_path)
 
             # Check if visualizer template is selected
             is_visualizer = template.get("template_id") == "visualizer"
@@ -364,10 +526,15 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                 )
                 last_v = "[v_vis]"
 
-            # Apply ASS subtitles
-            # Escape path for FFmpeg subtitles filter: replace colons and backslashes
-            escaped_ass = str(ass_path).replace("\\", "/").replace(":", "\\:")
-            filter_complex_steps.append(f"{last_v}ass={escaped_ass}[v_final]")
+            # Apply Subtitles / Lyrics Overlay
+            if cls.has_ass_filter():
+                escaped_ass = str(ass_path).replace("\\", "/").replace(":", "\\:")
+                filter_complex_steps.append(f"{last_v}ass={escaped_ass}[v_final]")
+            else:
+                concat_path = cls.generate_pillow_overlay_stream(lyrics, template, width, height, temp_dir, total_duration)
+                concat_in_idx = 2 + len(valid_image_clips)
+                cmd.extend(["-f", "concat", "-safe", "0", "-i", str(concat_path)])
+                filter_complex_steps.append(f"{last_v}[{concat_in_idx}:v]overlay=0:0[v_final]")
 
             cmd.extend([
                 "-filter_complex", ";".join(filter_complex_steps),

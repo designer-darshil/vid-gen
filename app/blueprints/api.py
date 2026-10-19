@@ -6,6 +6,7 @@ from app.services.project_service import ProjectService
 from app.services.storage_service import StorageService
 from app.services.sync_service import SyncService
 from app.services.render_service import RenderService
+from app.services.ai_service import AIService
 from app.models.database import get_db
 from config import RENDERS_DIR
 
@@ -13,16 +14,27 @@ api_bp = Blueprint("api", __name__, url_prefix="/api")
 
 # --- Projects ---
 
-@api_bp.route("/projects", methods=["POST"])
+@api_bp.route("/projects", methods=["GET", "POST"])
 @login_required
-def create_project():
+def handle_projects():
     user_id = session["user_id"]
+    if request.method == "GET":
+        projects = ProjectService.list_projects(user_id)
+        return jsonify({"success": True, "projects": projects})
+
     data = request.get_json() or {}
     title = data.get("title", "New Lyric Project")
     aspect_ratio = data.get("aspect_ratio", "16:9")
     quality = data.get("quality", "1080p")
+    template_id = data.get("template_id", "midnight_cinema")
 
     project = ProjectService.create_project(user_id, title, aspect_ratio, quality)
+    if template_id and template_id != "midnight_cinema":
+        ProjectService.update_project(project["id"], user_id, {"template_id": template_id})
+        project["template_id"] = template_id
+    if "lyrics" in data and isinstance(data["lyrics"], list):
+        ProjectService.update_project(project["id"], user_id, {"lyrics_data": data["lyrics"]})
+        project["lyrics"] = data["lyrics"]
     return jsonify({"success": True, "project": project}), 201
 
 @api_bp.route("/projects/<project_id>", methods=["GET"])
@@ -215,6 +227,109 @@ def transcribe_lyrics(project_id: str):
 
     ProjectService.update_project(project_id, user_id, {"lyrics_data": lines})
     return jsonify({"success": True, "lyrics": lines})
+
+# --- AI Creative Director & Settings ---
+
+@api_bp.route("/settings/ai", methods=["GET"])
+@login_required
+def get_ai_settings():
+    is_conf = AIService.is_configured()
+    key = AIService.get_gemini_key()
+    masked_key = (key[:4] + "..." + key[-4:]) if len(key) >= 8 else ("Set" if key else "")
+    return jsonify({
+        "success": True,
+        "configured": is_conf,
+        "masked_key": masked_key,
+        "provider": "Google Gemini (gemini-2.5-flash)"
+    })
+
+@api_bp.route("/settings/ai", methods=["POST"])
+@login_required
+def save_ai_settings():
+    data = request.get_json() or {}
+    key = data.get("gemini_api_key", "").strip()
+    test_only = data.get("test_only", False)
+
+    if test_only:
+        test_res = AIService.test_connection(key)
+        return jsonify(test_res)
+
+    if key:
+        test_res = AIService.test_connection(key)
+        if not test_res.get("success"):
+            return jsonify({"success": False, "error": f"Invalid API Key: {test_res.get('error')}"}), 400
+        AIService.set_gemini_key(key)
+        return jsonify({"success": True, "message": "Gemini API key saved and verified successfully!"})
+    else:
+        AIService.set_gemini_key("")
+        return jsonify({"success": True, "message": "Gemini API key removed."})
+
+@api_bp.route("/projects/<project_id>/ai/propose", methods=["POST"])
+@login_required
+def ai_propose_styles(project_id: str):
+    user_id = session["user_id"]
+    project = ProjectService.get_project(project_id, user_id)
+    if not project:
+        return jsonify({"error": "Project not found"}), 404
+
+    # Extract lyrics text
+    lyrics_data = project.get("lyrics_data", [])
+    lyrics_text = "\n".join([l.get("text", "") for l in lyrics_data if l.get("text")])
+
+    # Find background artwork if available
+    artwork_path = None
+    assets = project.get("assets", [])
+    for a in assets:
+        if a.get("asset_type") == "image":
+            fp = a.get("file_path")
+            if fp and Path(fp).exists():
+                artwork_path = fp
+                break
+
+    audio_path = None
+    if project.get("audio_asset"):
+        audio_path = project["audio_asset"].get("file_path")
+
+    result = AIService.propose_creative_direction(
+        song_title=project.get("title", ""),
+        lyrics_text=lyrics_text,
+        artwork_path=artwork_path,
+        audio_path=audio_path
+    )
+    return jsonify(result)
+
+@api_bp.route("/projects/<project_id>/ai/apply", methods=["POST"])
+@login_required
+def ai_apply_proposal(project_id: str):
+    user_id = session["user_id"]
+    data = request.get_json() or {}
+    proposal = data.get("proposal", {})
+    if not proposal:
+        return jsonify({"error": "No proposal data provided"}), 400
+
+    project = ProjectService.get_project(project_id, user_id)
+    if not project:
+        return jsonify({"error": "Project not found"}), 404
+
+    # Merge proposal into project template_data
+    current_template = project.get("template_data", {})
+    updated_template = dict(current_template)
+    
+    mapping_keys = [
+        "preset", "template_id", "font_family", "font_size", "font_weight", "letter_spacing",
+        "text_color", "highlight_color", "glow_color", "background_color", "outline_color",
+        "outline_width", "position_y", "text_align", "animation_type", "animation_duration",
+        "overlay_opacity", "bg_blur", "ken_burns"
+    ]
+    for k in mapping_keys:
+        if k in proposal:
+            updated_template[k] = proposal[k]
+    if "preset" in proposal:
+        updated_template["template_id"] = proposal["preset"]
+        updated_template["preset"] = proposal["preset"]
+
+    ProjectService.update_project(project_id, user_id, {"template_data": updated_template})
+    return jsonify({"success": True, "template_data": updated_template})
 
 # --- Rendering ---
 

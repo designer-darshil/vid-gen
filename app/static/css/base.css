@@ -1,36 +1,41 @@
 /* ==========================================================================
-   LyricStudio Design System — Core Tokens, Reset & Reusable Components
-   Minimal, refined dark-theme design inspired by Linear & professional tools.
-   STRICT RULE: The minimum font size anywhere is 16px. No text below 16px.
+   LyricStudio Design System — Solar Lime & Circuit Navy
+   Signature creative video editing aesthetic:
+   Circuit Navy backdrop (#0C1A2B), elevated navy panels (#112338, #162C46, #1B3655),
+   high-contrast off-white (#F5F8FA), muted blue-gray (#8C9EB5),
+   and signature Solar Lime (#B6FF3B) accents.
    ========================================================================== */
 
 :root {
-    /* --- Art Direction: Cinematic & Creative Coding Tokens --- */
-    --bg-app: #090909;                /* Deepest near-black void */
-    --bg-stage: #101010;              /* Composition stage backdrop */
-    --surface-primary: #171717;       /* Layered charcoal surface */
-    --surface-elevated: #202020;      /* Elevated bars, tool drawers & inspector */
-    --surface-hover: #262626;         /* Hover state */
-    --surface-active: #2E2E2E;        /* Active / pressed state */
-    --surface-glass: rgba(23, 23, 23, 0.88); /* Subtle frosted charcoal */
+    /* --- Solar Lime & Circuit Navy Palette --- */
+    --accent-primary: #B6FF3B;        /* Signature Solar Lime accent */
+    --accent-primary-hover: #C7FF60;  /* Lighter solar highlight */
+    --accent-primary-active: #9FE826; /* Deep lime pressed */
+    --accent-electric: #B6FF3B;
+    --accent-cyan: #38BDF8;
+    --accent-subtle: rgba(182, 255, 59, 0.14);
+    --accent-border: rgba(182, 255, 59, 0.35);
+    --accent-glow: 0 0 20px rgba(182, 255, 59, 0.35);
 
-    --text-primary: #F1EFEA;          /* Warm white primary text */
-    --text-secondary: #A09EA9;        /* Muted secondary text with accessible contrast */
-    --text-muted: #8E8C99;            /* Subtle guidance labels */
+    /* --- Circuit Navy Surface Hierarchy --- */
+    --bg-app: #0C1A2B;                /* Circuit Navy signature backdrop */
+    --bg-stage: #08121E;              /* Deep circuit stage void */
+    --surface-primary: #112338;       /* Layered navy surface */
+    --surface-elevated: #162C46;      /* Elevated bars, tool drawers, inspector */
+    --surface-hover: #1B3655;         /* Interactive hover */
+    --surface-active: #214167;        /* Pressed / active state */
+    --surface-glass: rgba(17, 35, 56, 0.90); /* Frosted circuit navy */
 
-    --border-subtle: #262626;         /* Fine separators */
-    --border-strong: #333333;         /* Structural borders */
-    --border-glow: rgba(169, 148, 255, 0.35);
+    /* Typography Colors */
+    --text-primary: #F5F8FA;          /* High-contrast off-white */
+    --text-secondary: #8C9EB5;        /* Muted blue-gray secondary text */
+    --text-muted: #5E7594;            /* Fine print, captions */
+    --text-on-brand: #0C1A2B;         /* High-contrast dark navy on lime (14:1 AAA contrast) */
 
-    /* Restrained Lavender & Violet Accents (Not overused) */
-    --accent-primary: #A994FF;        /* Restrained lavender accent */
-    --accent-primary-hover: #BEB0FF;  /* Lighter lavender highlight */
-    --accent-primary-active: #8E74FC; /* Deep lavender */
-    --accent-electric: #D4CBFF;       /* Soft glowing lavender text */
-    --accent-cyan: #38BDF8;           /* Subtle secondary cyan */
-    --accent-subtle: rgba(169, 148, 255, 0.12);
-    --accent-border: rgba(169, 148, 255, 0.28);
-    --accent-glow: 0 0 20px rgba(169, 148, 255, 0.25);
+    /* Borders (Thin 1px Hairlines) */
+    --border-subtle: #1D3757;         /* Fine separators */
+    --border-strong: #284A73;         /* Structural borders */
+    --border-glow: rgba(182, 255, 59, 0.35);
 
     /* Semantic Feedback */
     --color-success: #10B981;
@@ -54,31 +59,53 @@
     --text-main: var(--text-primary);
     --text-faint: var(--text-muted);
     --accent-purple: var(--accent-primary);
-    --accent-green: var(--color-success);
+    --accent-green: var(--accent-primary);
     --accent-red: var(--color-error);
     --accent-gold: var(--color-warning);
+    --bg-card-hover: var(--surface-hover);
+    --text-main: var(--text-primary);
+    --text-faint: var(--text-muted);
+    --accent-purple: var(--accent-primary);
+    --accent-green: var(--color-link);
+    --accent-red: var(--accent-primary);
+    --accent-gold: var(--color-warning);
 
-    /* --- Spacing Scale (4px-based) --- */
-    --space-1: 4px;
-    --space-2: 8px;
-    --space-3: 12px;
-    --space-4: 16px;
-    --space-5: 24px;
-    --space-6: 32px;
+    /* --- Spacing Scale (DESIGN.md) --- */
+    --space-xxs: 4px;
+    --space-xs: 8px;
+    --space-sm: 12px;
+    --space-md: 16px;
+    --space-lg: 20px;
+    --space-xl: 24px;
+    --space-xxl: 32px;
+    --space-xxxl: 48px;
+    --space-section: 60px;
+    --space-band: 108px;
+
+    /* Spacing aliases */
+    --space-1: var(--space-xxs);
+    --space-2: var(--space-xs);
+    --space-3: var(--space-sm);
+    --space-4: var(--space-md);
+    --space-5: var(--space-xl);
+    --space-6: var(--space-xxl);
     --space-7: 40px;
-    --space-8: 48px;
+    --space-8: var(--space-xxxl);
     --space-9: 64px;
 
-    /* --- Corner Radii --- */
-    --radius-sm: 6px;
+    /* --- Corner Radii (DESIGN.md) --- */
+    --radius-none: 0px;
+    --radius-xs: 4px;
+    --radius-sm: 5px;
     --radius-md: 8px;
-    --radius-lg: 10px;
+    --radius-lg: 12px;
+    --radius-full: 9999px;
 
-    /* --- Typography Scale (MINIMUM 16px) --- */
-    --font-sans: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    --font-heading: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    /* --- Typography (DESIGN.md: Inter Humanist Geometric) --- */
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-heading: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --font-serif: 'Playfair Display', 'Cormorant Garamond', 'Fraunces', 'Cinzel', serif;
-    --font-mono: 'Geist Mono', 'JetBrains Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --font-mono: 'JetBrains Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
     --font-size-base: 16px;  /* Minimum size for all interface text */
     --font-size-lg: 18px;    /* Secondary content and navigation */
@@ -89,13 +116,15 @@
     --font-weight-regular: 400;
     --font-weight-medium: 500;
     --font-weight-semibold: 600;
+    --font-weight-bold: 600;
 
     --line-height-body: 1.5;
     --line-height-heading: 1.25;
 
-    /* --- Shadows (Restrained) --- */
-    --shadow-menu: 0 4px 12px rgba(0, 0, 0, 0.45);
-    --shadow-modal: 0 16px 40px rgba(0, 0, 0, 0.65);
+    /* --- Shadows (DESIGN.md: layered-micro) --- */
+    --shadow-sm: rgba(68, 68, 70, 0.1) 0px 8px 12px 0px, rgba(68, 68, 70, 0.05) 0px 2px 8px -2px, rgba(68, 68, 70, 0.05) 0px 1px 4px -1px;
+    --shadow-menu: var(--shadow-sm);
+    --shadow-modal: 0 16px 40px rgba(0, 0, 0, 0.85);
 
     /* --- Transitions --- */
     --transition-fast: 150ms ease;
@@ -239,26 +268,34 @@ a:hover {
     pointer-events: none;
 }
 
-/* Primary Button (Restrained Violet) */
+/* Primary Button (Solar Lime #B6FF3B on Circuit Navy #0C1A2B — 14:1 AAA Contrast) */
 .btn-primary {
     background: var(--accent-primary);
-    color: #FFFFFF;
+    color: #0C1A2B;
+    font-weight: var(--font-weight-bold);
     border-color: var(--accent-primary);
+    border-radius: var(--radius-md);
+    box-shadow: 0 1px 3px rgba(182, 255, 59, 0.2);
 }
 .btn-primary:hover {
     background: var(--accent-primary-hover);
     border-color: var(--accent-primary-hover);
-    color: #FFFFFF;
+    color: #06101C;
+    box-shadow: 0 2px 8px rgba(182, 255, 59, 0.35);
 }
 .btn-primary:active {
     background: var(--accent-primary-active);
+    border-color: var(--accent-primary-active);
+    color: #06101C;
 }
 
-/* Secondary Button (Elevated Surface) */
+/* Secondary Button (Elevated Circuit Navy Surface) */
 .btn-secondary {
     background: var(--surface-elevated);
     color: var(--text-primary);
     border-color: var(--border-subtle);
+    border-radius: var(--radius-md);
+    box-shadow: none;
 }
 .btn-secondary:hover {
     background: var(--surface-hover);
@@ -267,6 +304,20 @@ a:hover {
 }
 .btn-secondary:active {
     background: var(--surface-active);
+}
+
+/* Tertiary Button (DESIGN.md: Accent Lime #9FD356) */
+.btn-tertiary, .btn-lime {
+    background: #9FD356;
+    color: #0C0A09;
+    border-color: #9FD356;
+    border-radius: var(--radius-md);
+    font-weight: var(--font-weight-medium);
+    box-shadow: none;
+}
+.btn-tertiary:hover, .btn-lime:hover {
+    background: #ADE364;
+    color: #000000;
 }
 
 /* Ghost / Tertiary Button */
@@ -418,7 +469,7 @@ textarea.form-control {
 
 .badge-accent {
     background: var(--accent-subtle);
-    color: #C4B5FD;
+    color: var(--accent-primary);
     border-color: var(--accent-border);
 }
 

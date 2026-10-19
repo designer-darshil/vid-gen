@@ -28,6 +28,7 @@ const Editor = {
         this.setupMediaUploads();
         this.setupHeaderActions();
         this.setupKeyboardShortcuts();
+        this.checkAIStatus();
     },
 
     setupCreativeRail() {
@@ -176,6 +177,67 @@ const Editor = {
         if (badge) badge.textContent = `${num}%`;
         window.Preview.templateConfig = this.project.template_data;
         window.Preview.renderFrame();
+        this.triggerAutosave();
+    },
+
+    addPresetText(type) {
+        if (!this.project) return;
+        const curTime = window.Preview ? window.Preview.currentTime : 0;
+        if (type === 'title') {
+            const newClip = {
+                start: Math.round(curTime * 10) / 10,
+                end: Math.round((curTime + 5.0) * 10) / 10,
+                text: "✦ TITLE ANTHEM ✦",
+                words: []
+            };
+            if (!this.project.lyrics_data) this.project.lyrics_data = [];
+            this.project.lyrics_data.push(newClip);
+            this.project.lyrics_data.sort((a, b) => a.start - b.start);
+            if (window.Timeline) window.Timeline.renderTracks();
+            if (window.Preview) {
+                window.Preview.setProject(this.project);
+                window.Preview.seek(newClip.start);
+            }
+            if (window.SyncUI) window.SyncUI.renderLinesList();
+            this.triggerAutosave();
+            showToast('Added Headline Layer at playhead', 'success');
+        } else {
+            if (window.SyncUI) {
+                window.SyncUI.addNewLineAtPlayhead();
+            }
+        }
+    },
+
+    setTransitionStyle(style) {
+        if (!this.project || !this.project.template_data) return;
+        this.project.template_data.transition_style = style;
+        document.querySelectorAll('#drawer-transitions .motion-preset-chip').forEach(chip => {
+            chip.classList.toggle('active', chip.getAttribute('data-transition') === style);
+        });
+        window.Preview.templateConfig = this.project.template_data;
+        this.triggerAutosave();
+        showToast(`Transition set to "${style}"`, 'info');
+    },
+
+    setTransitionDuration(val) {
+        const num = parseFloat(val);
+        if (isNaN(num)) return;
+        if (!this.project || !this.project.template_data) return;
+        this.project.template_data.transition_duration = num;
+        window.Preview.templateConfig = this.project.template_data;
+        this.triggerAutosave();
+    },
+
+    setTransitionEasing(val) {
+        if (!this.project || !this.project.template_data) return;
+        this.project.template_data.transition_easing = val;
+        window.Preview.templateConfig = this.project.template_data;
+        this.triggerAutosave();
+    },
+
+    applyTransitionToAll() {
+        const style = (this.project.template_data && this.project.template_data.transition_style) || 'crossfade';
+        showToast(`Applied ${style} transition across all lyric line cuts!`, 'success');
         this.triggerAutosave();
     },
 
@@ -414,6 +476,26 @@ const Editor = {
         setVal('prop-animation-duration-ins', cfg.animation_duration || 0.45);
         setVal('prop-animation-direction', cfg.animation_direction || 'up');
 
+        // Inspector-specific mirrored controls
+        setVal('prop-font-family-ins', cfg.font_family);
+        setVal('prop-font-size-slider-ins', cfg.font_size || 48);
+        setText('ins-fontsize-badge', `${cfg.font_size || 48}pt`);
+        setVal('prop-font-weight-ins', cfg.font_weight || '700');
+        setVal('prop-letter-spacing-slider-ins', cfg.letter_spacing || 3.0);
+        setText('tracking-val-badge-ins', `${cfg.letter_spacing || 3.0}px`);
+
+        setVal('prop-bg-fit-ins', cfg.bg_fit || 'cover');
+        setVal('prop-bg-zoom-ins', cfg.bg_zoom || 'zoom-in');
+        setVal('prop-overlay-opacity-ins', cfg.overlay_opacity !== undefined ? cfg.overlay_opacity : 0.38);
+        setText('overlay-val-badge-ins', `${Math.round((cfg.overlay_opacity !== undefined ? cfg.overlay_opacity : 0.38) * 100)}%`);
+        setVal('prop-bg-blur-ins', cfg.bg_blur !== undefined ? cfg.bg_blur : 0);
+        setText('blur-val-badge-ins', `${cfg.bg_blur !== undefined ? cfg.bg_blur : 0}px`);
+        setVal('prop-bg-color-ins', cfg.background_color || '#0C1A2B');
+        setText('bg-color-hex-ins', (cfg.background_color || '#0C1A2B').toUpperCase());
+
+        setVal('prop-sync-offset', cfg.sync_offset_ms || 0);
+        setText('sync-offset-badge', `${cfg.sync_offset_ms || 0} ms`);
+
         const letterboxToggle = document.getElementById('effect-letterbox-toggle');
         if (letterboxToggle) letterboxToggle.checked = Boolean(cfg.show_letterbox || cfg.template_id === 'midnight_cinema' || cfg.template_id === 'cinematic');
 
@@ -424,6 +506,99 @@ const Editor = {
         if (beatPulseToggle) beatPulseToggle.checked = Boolean(cfg.beat_pulse !== false);
     },
 
+    syncFontFamily(val) {
+        if (!this.project || !this.project.template_data) return;
+        this.project.template_data.font_family = val;
+        const d = document.getElementById('prop-font-family');
+        if (d && d.value !== val) d.value = val;
+        const ins = document.getElementById('prop-font-family-ins');
+        if (ins && ins.value !== val) ins.value = val;
+        window.Preview.templateConfig = this.project.template_data;
+        window.Preview.renderFrame();
+        this.triggerAutosave();
+    },
+
+    syncFontWeight(val) {
+        if (!this.project || !this.project.template_data) return;
+        this.project.template_data.font_weight = val;
+        const d = document.getElementById('prop-font-weight');
+        if (d && d.value !== val) d.value = val;
+        const ins = document.getElementById('prop-font-weight-ins');
+        if (ins && ins.value !== val) ins.value = val;
+        window.Preview.templateConfig = this.project.template_data;
+        window.Preview.renderFrame();
+        this.triggerAutosave();
+    },
+
+    syncBgFit(val) {
+        if (!this.project || !this.project.template_data) return;
+        this.project.template_data.bg_fit = val;
+        const d = document.getElementById('prop-bg-fit');
+        if (d && d.value !== val) d.value = val;
+        const ins = document.getElementById('prop-bg-fit-ins');
+        if (ins && ins.value !== val) ins.value = val;
+        window.Preview.templateConfig = this.project.template_data;
+        window.Preview.renderFrame();
+        this.triggerAutosave();
+    },
+
+    syncBgZoom(val) {
+        if (!this.project || !this.project.template_data) return;
+        this.project.template_data.bg_zoom = val;
+        const d = document.getElementById('prop-bg-zoom');
+        if (d && d.value !== val) d.value = val;
+        const ins = document.getElementById('prop-bg-zoom-ins');
+        if (ins && ins.value !== val) ins.value = val;
+        window.Preview.templateConfig = this.project.template_data;
+        window.Preview.renderFrame();
+        this.triggerAutosave();
+    },
+
+    syncOverlayOpacity(val) {
+        if (!this.project || !this.project.template_data) return;
+        const num = parseFloat(val);
+        this.project.template_data.overlay_opacity = num;
+        const d = document.getElementById('prop-overlay-opacity');
+        if (d && d.value !== val) d.value = val;
+        const ins = document.getElementById('prop-overlay-opacity-ins');
+        if (ins && ins.value !== val) ins.value = val;
+        const pct = `${Math.round(num * 100)}%`;
+        const b1 = document.getElementById('overlay-val-badge');
+        if (b1) b1.textContent = pct;
+        const b2 = document.getElementById('overlay-val-badge-ins');
+        if (b2) b2.textContent = pct;
+        window.Preview.templateConfig = this.project.template_data;
+        window.Preview.renderFrame();
+        this.triggerAutosave();
+    },
+
+    syncBgBlur(val) {
+        if (!this.project || !this.project.template_data) return;
+        const num = parseInt(val);
+        this.project.template_data.bg_blur = num;
+        const d = document.getElementById('prop-bg-blur');
+        if (d && d.value !== val) d.value = val;
+        const ins = document.getElementById('prop-bg-blur-ins');
+        if (ins && ins.value !== val) ins.value = val;
+        const txt = `${num}px`;
+        const b1 = document.getElementById('blur-val-badge');
+        if (b1) b1.textContent = txt;
+        const b2 = document.getElementById('blur-val-badge-ins');
+        if (b2) b2.textContent = txt;
+        window.Preview.templateConfig = this.project.template_data;
+        window.Preview.renderFrame();
+        this.triggerAutosave();
+    },
+
+    updateSyncOffset(val) {
+        if (!this.project || !this.project.template_data) return;
+        const num = parseInt(val);
+        this.project.template_data.sync_offset_ms = num;
+        const b = document.getElementById('sync-offset-badge');
+        if (b) b.textContent = `${num > 0 ? '+' : ''}${num} ms`;
+        this.triggerAutosave();
+    },
+
     setBackgroundColor(hex) {
         if (!this.project || !this.project.template_data) return;
         this.project.template_data.background_color = hex;
@@ -431,6 +606,10 @@ const Editor = {
         const hexLabel = document.getElementById('bg-color-hex');
         if (colorInput) colorInput.value = hex;
         if (hexLabel) hexLabel.textContent = hex.toUpperCase();
+        const colorInputIns = document.getElementById('prop-bg-color-ins');
+        const hexLabelIns = document.getElementById('bg-color-hex-ins');
+        if (colorInputIns) colorInputIns.value = hex;
+        if (hexLabelIns) hexLabelIns.textContent = hex.toUpperCase();
         window.Preview.templateConfig = this.project.template_data;
         window.Preview.renderFrame();
         this.triggerAutosave();
@@ -457,7 +636,13 @@ const Editor = {
         const num = parseInt(val);
         this.project.template_data.font_size = num;
         const numInput = document.getElementById('prop-font-size');
-        if (numInput) numInput.value = num;
+        if (numInput && numInput.value !== String(num)) numInput.value = num;
+        const slider = document.getElementById('prop-font-size-slider');
+        if (slider && slider.value !== String(num)) slider.value = num;
+        const insSlider = document.getElementById('prop-font-size-slider-ins');
+        if (insSlider && insSlider.value !== String(num)) insSlider.value = num;
+        const badge = document.getElementById('ins-fontsize-badge');
+        if (badge) badge.textContent = `${num}pt`;
         window.Preview.templateConfig = this.project.template_data;
         window.Preview.renderFrame();
         this.triggerAutosave();
@@ -467,8 +652,14 @@ const Editor = {
         if (!this.project || !this.project.template_data) return;
         const num = parseFloat(val);
         this.project.template_data.letter_spacing = num;
-        const badge = document.getElementById('tracking-val-badge');
-        if (badge) badge.textContent = `${num}px`;
+        const b1 = document.getElementById('tracking-val-badge');
+        if (b1) b1.textContent = `${num}px`;
+        const b2 = document.getElementById('tracking-val-badge-ins');
+        if (b2) b2.textContent = `${num}px`;
+        const s1 = document.getElementById('prop-letter-spacing-slider');
+        if (s1 && s1.value !== String(num)) s1.value = num;
+        const s2 = document.getElementById('prop-letter-spacing-slider-ins');
+        if (s2 && s2.value !== String(num)) s2.value = num;
         window.Preview.templateConfig = this.project.template_data;
         window.Preview.renderFrame();
         this.triggerAutosave();
@@ -609,5 +800,254 @@ const Editor = {
                 console.error('Polling error:', err);
             }
         }, 1500);
+    },
+
+    // --- AI Studio Controller ---
+    currentAIProposal: null,
+
+    async checkAIStatus() {
+        try {
+            const res = await API.get('/api/settings/ai');
+            const dot = document.getElementById('ai-status-dot');
+            const title = document.getElementById('ai-status-title');
+            const subtitle = document.getElementById('ai-status-subtitle');
+            const badge = document.getElementById('modal-gemini-badge');
+
+            if (res && res.configured) {
+                if (dot) dot.classList.add('active');
+                if (title) title.textContent = 'Gemini 2.5 Flash: Active';
+                if (subtitle) subtitle.textContent = 'Multimodal neural creative analysis ready';
+                if (badge) {
+                    badge.className = 'badge badge-success';
+                    badge.textContent = 'Connected';
+                }
+            } else {
+                if (dot) dot.classList.remove('active');
+                if (title) title.textContent = 'Local Creative Mode';
+                if (subtitle) subtitle.textContent = 'Click Setup to connect Gemini AI API';
+                if (badge) {
+                    badge.className = 'badge badge-warning';
+                    badge.textContent = 'Key Required';
+                }
+            }
+        } catch (e) {
+            console.warn('AI status check error:', e);
+        }
+    },
+
+    async openAISettingsModal() {
+        openModal('ai-settings-modal');
+        const feedback = document.getElementById('gemini-test-feedback');
+        if (feedback) feedback.style.display = 'none';
+
+        try {
+            const res = await API.get('/api/settings/ai');
+            const keyInput = document.getElementById('setting-gemini-key');
+            if (keyInput && res && res.masked_key) {
+                keyInput.placeholder = `Current Key: ${res.masked_key} (leave blank to keep)`;
+            }
+            const badge = document.getElementById('modal-gemini-badge');
+            if (badge) {
+                if (res && res.configured) {
+                    badge.className = 'badge badge-success';
+                    badge.textContent = 'Connected';
+                } else {
+                    badge.className = 'badge badge-warning';
+                    badge.textContent = 'Key Required';
+                }
+            }
+        } catch (e) {
+            console.error('Failed to load AI settings:', e);
+        }
+    },
+
+    togglePasswordVisibility(id) {
+        const inp = document.getElementById(id);
+        if (!inp) return;
+        inp.type = inp.type === 'password' ? 'text' : 'password';
+    },
+
+    async testGeminiKey() {
+        const keyInput = document.getElementById('setting-gemini-key');
+        const key = keyInput ? keyInput.value.trim() : '';
+        const feedback = document.getElementById('gemini-test-feedback');
+        if (!feedback) return;
+
+        feedback.style.display = 'block';
+        feedback.style.color = 'var(--text-secondary)';
+        feedback.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Testing connection to Gemini API...';
+
+        try {
+            const res = await API.post('/api/settings/ai', { test_only: true, gemini_api_key: key });
+            if (res && res.success) {
+                feedback.style.color = 'var(--color-success)';
+                feedback.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${res.message}`;
+            } else {
+                feedback.style.color = 'var(--color-error)';
+                feedback.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${res.error || 'Connection failed'}`;
+            }
+        } catch (err) {
+            feedback.style.color = 'var(--color-error)';
+            feedback.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${err.message || 'Test failed'}`;
+        }
+    },
+
+    async saveGeminiKey() {
+        const keyInput = document.getElementById('setting-gemini-key');
+        const key = keyInput ? keyInput.value.trim() : '';
+
+        try {
+            showToast('Verifying and saving Gemini API key...', 'info');
+            const res = await API.post('/api/settings/ai', { gemini_api_key: key });
+            if (res && res.success) {
+                showToast(res.message, 'success');
+                this.checkAIStatus();
+                closeModal('ai-settings-modal');
+            }
+        } catch (err) {
+            showToast(err.message || 'Failed to save key', 'error');
+            const feedback = document.getElementById('gemini-test-feedback');
+            if (feedback) {
+                feedback.style.display = 'block';
+                feedback.style.color = 'var(--color-error)';
+                feedback.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${err.message}`;
+            }
+        }
+    },
+
+    async runAIPropose() {
+        const btn = document.getElementById('btn-run-ai-propose');
+        const loader = document.getElementById('ai-loading-indicator');
+        const results = document.getElementById('ai-proposal-results');
+
+        if (btn) btn.disabled = true;
+        if (loader) loader.style.display = 'block';
+        if (results) results.style.display = 'none';
+
+        try {
+            const res = await API.post(`/api/projects/${this.project.id}/ai/propose`, {});
+            if (res && res.success && res.proposal) {
+                const prop = res.proposal;
+                this.currentAIProposal = prop;
+
+                // Populate UI
+                const presetName = document.getElementById('ai-prop-preset-name');
+                const providerTag = document.getElementById('ai-prop-provider');
+                const rationale = document.getElementById('ai-prop-rationale');
+                const colorText = document.getElementById('ai-color-text');
+                const colorHighlight = document.getElementById('ai-color-highlight');
+                const colorGlow = document.getElementById('ai-color-glow');
+                const colorBg = document.getElementById('ai-color-bg');
+                const specFont = document.getElementById('ai-spec-font');
+                const specMotion = document.getElementById('ai-spec-motion');
+                const specPos = document.getElementById('ai-spec-pos');
+                const specLetterbox = document.getElementById('ai-spec-letterbox');
+
+                if (presetName) presetName.textContent = prop.preset ? prop.preset.replace('_', ' ').toUpperCase() : 'Custom Style';
+                if (providerTag) providerTag.textContent = prop.provider || 'AI Engine';
+                if (rationale) rationale.textContent = prop.rationale || 'Art directed for melodic sync and visual depth.';
+
+                if (colorText) colorText.style.background = prop.text_color || '#FFFFFF';
+                if (colorHighlight) colorHighlight.style.background = prop.highlight_color || '#A994FF';
+                if (colorGlow) colorGlow.style.background = prop.glow_color || '#4FACFE';
+                if (colorBg) colorBg.style.background = prop.background_color || '#090909';
+
+                if (specFont) specFont.textContent = (prop.font_family || 'Outfit').replace(/['"]/g, '').split(',')[0];
+                if (specMotion) specMotion.textContent = (prop.animation_type || 'cinematic-rise').replace('-', ' ');
+                if (specPos) specPos.textContent = `${prop.position_y || 76}% Y`;
+                if (specLetterbox) specLetterbox.textContent = prop.preset === 'midnight_cinema' ? 'Enabled (2.39:1)' : 'Standard';
+
+                // Scene changes
+                const scenesList = document.getElementById('ai-scenes-list');
+                if (scenesList && prop.scene_changes && prop.scene_changes.length > 0) {
+                    scenesList.innerHTML = prop.scene_changes.map(sc => `
+                        <div class="scene-chip">
+                            <strong>${sc.start}s – ${sc.end}s:</strong> ${sc.description}
+                        </div>
+                    `).join('');
+                }
+
+                if (loader) loader.style.display = 'none';
+                if (results) results.style.display = 'block';
+
+                showToast('AI creative direction proposed!', 'success');
+            }
+        } catch (err) {
+            showToast(err.message || 'Failed to generate proposal', 'error');
+            if (loader) loader.style.display = 'none';
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    },
+
+    async applyCurrentAIProposal() {
+        if (!this.currentAIProposal) return;
+        try {
+            showToast('Applying creative direction...', 'info');
+            const res = await API.post(`/api/projects/${this.project.id}/ai/apply`, { proposal: this.currentAIProposal });
+            if (res && res.success) {
+                this.project.template_data = res.template_data;
+                if (window.Preview) {
+                    window.Preview.setProject(this.project);
+                    window.Preview.render();
+                }
+                showToast('Creative direction applied to project canvas!', 'success');
+            }
+        } catch (err) {
+            showToast(err.message || 'Failed to apply proposal', 'error');
+        }
+    },
+
+    // --- Instant In-Browser Canvas Export ---
+    async startClientSideCanvasExport() {
+        if (!window.Preview || !this.project) return;
+        closeModal('export-modal');
+        showToast('Initiating browser canvas recording...', 'info');
+
+        const canvas = window.Preview.canvas;
+        const audio = document.getElementById('master-audio');
+        const totalDuration = window.Preview.duration || 15.0;
+
+        let stream;
+        try {
+            stream = canvas.captureStream(30);
+            if (audio && audio.src && audio.captureStream) {
+                const aStream = audio.captureStream();
+                aStream.getAudioTracks().forEach(t => stream.addTrack(t));
+            }
+        } catch (e) {
+            stream = canvas.captureStream(30);
+        }
+
+        const mimeTypes = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
+        const selectedMime = mimeTypes.find(m => MediaRecorder.isTypeSupported(m)) || 'video/webm';
+
+        const recorder = new MediaRecorder(stream, { mimeType: selectedMime });
+        const chunks = [];
+        recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+
+        recorder.onstop = () => {
+            const blob = new Blob(chunks, { type: selectedMime });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const ext = selectedMime.includes('mp4') ? 'mp4' : 'webm';
+            a.download = `${(this.project.title || 'lyric_video').replace(/\s+/g, '_')}_instant.${ext}`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Browser video export completed and downloaded!', 'success');
+        };
+
+        window.Preview.seek(0);
+        recorder.start();
+        window.Preview.play();
+
+        const checkDone = setInterval(() => {
+            if (window.Preview.currentTime >= totalDuration || !window.Preview.isPlaying) {
+                clearInterval(checkDone);
+                recorder.stop();
+                window.Preview.pause();
+            }
+        }, 300);
     }
 };

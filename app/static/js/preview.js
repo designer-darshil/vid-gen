@@ -371,42 +371,42 @@ class PreviewEngine {
     drawCinematicFallbackBackground(ctx, w, h, time = 0) {
         ctx.save();
 
-        // 1. Celestial Midnight Sky (Deep Obsidian to Twilight Lavender)
+        // 1. Circuit Navy Deep Cosmic Sky Backdrop (#040810 to #162C46)
         const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.72);
-        skyGrad.addColorStop(0, '#050508');
-        skyGrad.addColorStop(0.35, '#0a0911');
-        skyGrad.addColorStop(0.65, '#13101e');
-        skyGrad.addColorStop(0.88, '#1e1633');
-        skyGrad.addColorStop(1, '#2c1e48');
+        skyGrad.addColorStop(0, '#040810');
+        skyGrad.addColorStop(0.35, '#07101B');
+        skyGrad.addColorStop(0.65, '#0C1A2B');
+        skyGrad.addColorStop(0.88, '#112338');
+        skyGrad.addColorStop(1, '#162C46');
         ctx.fillStyle = skyGrad;
         ctx.fillRect(0, 0, w, h * 0.72);
 
-        // 2. Distant Stars & Celestial Shimmer (deterministic pseudo-random)
+        // 2. Distant Stars & Shimmer
         const starCount = 65;
         for (let i = 0; i < starCount; i++) {
             const starX = ((i * 137.5) % 1) * w;
             const starY = ((i * 269.3) % 0.65) * h;
             const size = (i % 3 === 0) ? 1.6 : 1.0;
             const twinkle = 0.35 + 0.55 * Math.sin(time * 1.8 + i);
-            ctx.fillStyle = `rgba(241, 239, 234, ${twinkle})`;
+            ctx.fillStyle = `rgba(245, 248, 250, ${twinkle})`;
             ctx.beginPath();
             ctx.arc(starX, starY, size, 0, Math.PI * 2);
             ctx.fill();
         }
 
-        // 3. Ambient Lavender Horizon Haze Nebula
+        // 3. Ambient Solar Lime & Aurora Horizon Nebula
         const nebulaX = w * 0.5;
         const nebulaY = h * 0.68;
         const nebulaGrad = ctx.createRadialGradient(nebulaX, nebulaY, 10, nebulaX, nebulaY, w * 0.48);
-        nebulaGrad.addColorStop(0, 'rgba(169, 148, 255, 0.28)');
-        nebulaGrad.addColorStop(0.35, 'rgba(142, 116, 235, 0.14)');
-        nebulaGrad.addColorStop(0.7, 'rgba(110, 80, 190, 0.05)');
+        nebulaGrad.addColorStop(0, 'rgba(182, 255, 59, 0.16)');
+        nebulaGrad.addColorStop(0.35, 'rgba(56, 189, 248, 0.08)');
+        nebulaGrad.addColorStop(0.7, 'rgba(12, 26, 43, 0.04)');
         nebulaGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = nebulaGrad;
         ctx.fillRect(0, h * 0.2, w, h * 0.6);
 
-        // 4. Distant Mountain Ridge Layer 1 (Far silhouette)
-        ctx.fillStyle = '#100d1a';
+        // 4. Distant Mountain Ridge Layer 1 (Far silhouette in Navy)
+        ctx.fillStyle = '#060E18';
         ctx.beginPath();
         ctx.moveTo(0, h * 0.68);
         const farPeaks = [
@@ -420,7 +420,7 @@ class PreviewEngine {
         ctx.fill();
 
         // 5. Midground Mountain Ridge Layer 2 (Sharp craggy peaks)
-        ctx.fillStyle = '#0a0812';
+        ctx.fillStyle = '#071526';
         ctx.beginPath();
         ctx.moveTo(0, h * 0.70);
         const midPeaks = [
@@ -433,36 +433,36 @@ class PreviewEngine {
         ctx.closePath();
         ctx.fill();
 
-        // 6. Terrain Ground Plane (Dark Obsidian Valley)
+        // 6. Terrain Ground Plane (Circuit Navy Dark Basin)
         const groundGrad = ctx.createLinearGradient(0, h * 0.68, 0, h);
-        groundGrad.addColorStop(0, '#09080e');
-        groundGrad.addColorStop(0.3, '#07060a');
-        groundGrad.addColorStop(1, '#040406');
+        groundGrad.addColorStop(0, '#06101c');
+        groundGrad.addColorStop(0.3, '#040b14');
+        groundGrad.addColorStop(1, '#02060b');
         ctx.fillStyle = groundGrad;
         ctx.fillRect(0, h * 0.68, w, h * 0.32);
 
-        // 7. Distant Neon Horizon Beam
+        // 7. Distant Solar Lime Horizon Beam
         const horizY = h * 0.68;
         const horizGlow = ctx.createLinearGradient(0, horizY - 14, 0, horizY + 14);
-        horizGlow.addColorStop(0, 'rgba(169, 148, 255, 0)');
-        horizGlow.addColorStop(0.5, 'rgba(169, 148, 255, 0.45)');
-        horizGlow.addColorStop(1, 'rgba(169, 148, 255, 0)');
+        horizGlow.addColorStop(0, 'rgba(182, 255, 59, 0)');
+        horizGlow.addColorStop(0.5, 'rgba(182, 255, 59, 0.35)');
+        horizGlow.addColorStop(1, 'rgba(182, 255, 59, 0)');
         ctx.fillStyle = horizGlow;
         ctx.fillRect(0, horizY - 14, w, 28);
 
         // Horizon fine neon line
-        ctx.strokeStyle = 'rgba(212, 203, 255, 0.65)';
+        ctx.strokeStyle = 'rgba(182, 255, 59, 0.55)';
         ctx.lineWidth = 1.2;
         ctx.beginPath();
         ctx.moveTo(0, horizY);
         ctx.lineTo(w, horizY);
         ctx.stroke();
 
-        // 8. Atmospheric Ground Mist Ribbons (Gentle undulating wave drift)
+        // 8. Atmospheric Ground Mist Ribbons
         const mistWave = Math.sin(time * 0.6) * 12;
         const mistGrad = ctx.createLinearGradient(0, h * 0.67, 0, h * 0.85);
-        mistGrad.addColorStop(0, 'rgba(169, 148, 255, 0.12)');
-        mistGrad.addColorStop(0.5, 'rgba(139, 92, 246, 0.06)');
+        mistGrad.addColorStop(0, 'rgba(182, 255, 59, 0.08)');
+        mistGrad.addColorStop(0.5, 'rgba(56, 189, 248, 0.04)');
         mistGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = mistGrad;
         ctx.beginPath();
@@ -506,7 +506,13 @@ class PreviewEngine {
         const activeImageClip = this.getActiveImageClip(this.currentTime);
         let hasRenderedImage = false;
 
-        if (activeImageClip && this.imageCache.has(activeImageClip.asset_id)) {
+        if (activeImageClip) {
+            if (!this.imageCache.has(activeImageClip.asset_id)) {
+                const img = new Image();
+                img.onload = () => this.renderFrame();
+                img.src = `/api/assets/${activeImageClip.asset_id}/file`;
+                this.imageCache.set(activeImageClip.asset_id, img);
+            }
             const img = this.imageCache.get(activeImageClip.asset_id);
             if (img && img.complete && img.naturalWidth > 0) {
                 ctx.save();
@@ -567,7 +573,7 @@ class PreviewEngine {
                 // Dimming overlay
                 const op = cfg.overlay_opacity !== undefined ? cfg.overlay_opacity : 0.38;
                 if (op > 0) {
-                    ctx.fillStyle = `rgba(8, 8, 12, ${op})`;
+                    ctx.fillStyle = `rgba(8, 16, 28, ${op})`;
                     ctx.fillRect(0, 0, w, h);
                 }
                 hasRenderedImage = true;
@@ -579,21 +585,12 @@ class PreviewEngine {
             this.drawCinematicFallbackBackground(ctx, w, h, this.currentTime);
 
             // Optional custom background color tint if specified
-            if (cfg.background_color && cfg.background_color !== '#090909') {
+            if (cfg.background_color && cfg.background_color !== '#090909' && cfg.background_color !== '#0C1A2B') {
                 ctx.save();
                 ctx.globalAlpha = 0.3;
                 ctx.fillStyle = cfg.background_color;
                 ctx.fillRect(0, 0, w, h);
                 ctx.restore();
-            }
-        }
-
-                // Dimming overlay
-                const op = cfg.overlay_opacity !== undefined ? cfg.overlay_opacity : 0.4;
-                if (op > 0) {
-                    ctx.fillStyle = `rgba(9, 9, 9, ${op})`;
-                    ctx.fillRect(0, 0, w, h);
-                }
             }
         }
 
@@ -667,7 +664,7 @@ class PreviewEngine {
             // Draw direct manipulation selection handles ONLY when lyric layer is selected
             if (this.selectedLayer === 'lyric') {
                 ctx.save();
-                ctx.strokeStyle = '#A994FF';
+                ctx.strokeStyle = '#B6FF3B';
                 ctx.lineWidth = 2.5;
                 ctx.setLineDash([8, 6]);
                 ctx.strokeRect(this.textBounds.x, this.textBounds.y, this.textBounds.w, this.textBounds.h);
@@ -675,21 +672,21 @@ class PreviewEngine {
                 // Floating Layer Tag Badge above top-left
                 ctx.setLineDash([]);
                 const badgeText = "✦ Typography Layer • Drag to Move";
-                ctx.font = '600 14px "Geist", "Inter", sans-serif';
+                ctx.font = '500 13px "Inter", sans-serif';
                 const tagW = ctx.measureText(badgeText).width + 20;
                 const tagH = 26;
                 const tagX = this.textBounds.x;
                 const tagY = this.textBounds.y - tagH - 8;
 
-                ctx.fillStyle = 'rgba(16, 16, 24, 0.94)';
-                ctx.strokeStyle = 'rgba(169, 148, 255, 0.6)';
+                ctx.fillStyle = 'rgba(12, 26, 43, 0.95)';
+                ctx.strokeStyle = 'rgba(182, 255, 59, 0.7)';
                 ctx.lineWidth = 1;
                 ctx.beginPath();
-                ctx.roundRect ? ctx.roundRect(tagX, tagY, tagW, tagH, 4) : ctx.rect(tagX, tagY, tagW, tagH);
+                ctx.roundRect ? ctx.roundRect(tagX, tagY, tagW, tagH, 6) : ctx.rect(tagX, tagY, tagW, tagH);
                 ctx.fill();
                 ctx.stroke();
 
-                ctx.fillStyle = '#F1EFEA';
+                ctx.fillStyle = '#B6FF3B';
                 ctx.textAlign = 'left';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(badgeText, tagX + 10, tagY + tagH / 2);
@@ -709,20 +706,20 @@ class PreviewEngine {
                     ctx.fillRect(cx - 7, cy - 7, 14, 14);
 
                     // Inner handle
-                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillStyle = '#B6FF3B';
                     ctx.fillRect(cx - 6, cy - 6, 12, 12);
-                    ctx.strokeStyle = '#A994FF';
+                    ctx.strokeStyle = '#0C1A2B';
                     ctx.lineWidth = 2;
                     ctx.strokeRect(cx - 6, cy - 6, 12, 12);
                 });
 
                 // Center position anchor dot
-                ctx.fillStyle = '#A994FF';
+                ctx.fillStyle = '#B6FF3B';
                 ctx.beginPath();
-                ctx.arc(posX, posY, 5, 0, Math.PI * 2);
+                ctx.arc(posX, posY, 6, 0, Math.PI * 2);
                 ctx.fill();
-                ctx.strokeStyle = '#FFFFFF';
-                ctx.lineWidth = 1.5;
+                ctx.strokeStyle = '#0C1A2B';
+                ctx.lineWidth = 2;
                 ctx.stroke();
 
                 ctx.restore();
@@ -734,7 +731,7 @@ class PreviewEngine {
         // 6. Magnetic Snap Guide Lines
         if (this.snapGuideX !== null) {
             ctx.save();
-            ctx.strokeStyle = '#A994FF';
+            ctx.strokeStyle = '#B6FF3B';
             ctx.lineWidth = 1.5;
             ctx.beginPath();
             ctx.moveTo(this.snapGuideX, 0);
@@ -744,7 +741,7 @@ class PreviewEngine {
         }
         if (this.snapGuideY !== null) {
             ctx.save();
-            ctx.strokeStyle = '#A994FF';
+            ctx.strokeStyle = '#B6FF3B';
             ctx.lineWidth = 1.5;
             ctx.beginPath();
             ctx.moveTo(0, this.snapGuideY);
@@ -809,6 +806,9 @@ class PreviewEngine {
             if (time <= this.lyrics[0].start) {
                 return this.lyrics[0];
             }
+            const prior = [...this.lyrics].reverse().find(l => time >= l.end);
+            if (prior) return prior;
+            return this.lyrics[0];
         }
         return null;
     }

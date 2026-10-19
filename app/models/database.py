@@ -157,6 +157,15 @@ def init_db(app=None):
     );
     """)
 
+    # Settings table for API keys and configurations
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
     conn.commit()
     conn.close()
     logger.info("Database initialized successfully at %s", db_path)

@@ -175,13 +175,13 @@ const TEMPLATES = {
             letter_spacing: 3.5,
             line_height: 1.3,
             text_color: '#F1EFEA',
-            secondary_color: '#A09EA9',
-            highlight_color: '#A994FF',
-            outline_color: '#090909',
+            secondary_color: '#8C9EB5',
+            highlight_color: '#B6FF3B',
+            outline_color: '#08121E',
             outline_width: 2,
             shadow_color: 'rgba(0,0,0,0.92)',
             shadow_blur: 18,
-            glow_color: 'rgba(169, 148, 255, 0.25)',
+            glow_color: 'rgba(182, 255, 59, 0.25)',
             glow_size: 14,
             text_align: 'center',
             position_y: 74,
@@ -259,7 +259,7 @@ const TEMPLATES = {
             line_height: 1.3,
             text_color: '#FFFDF7',
             secondary_color: '#FFF8E6',
-            highlight_color: '#A994FF',
+            highlight_color: '#B6FF3B',
             outline_color: 'transparent',
             outline_width: 0,
             shadow_color: 'rgba(255, 248, 230, 0.35)',
@@ -327,7 +327,7 @@ const TEMPLATES = {
             line_height: 1.35,
             text_color: '#F1EFEA',
             secondary_color: '#A09EA9',
-            highlight_color: '#A994FF',
+            highlight_color: '#B6FF3B',
             outline_color: '#171717',
             outline_width: 1,
             shadow_color: 'rgba(0, 0, 0, 0.85)',
@@ -394,7 +394,7 @@ const TEMPLATES = {
             letter_spacing: 1.0,
             line_height: 1.25,
             text_color: '#FFFFFF',
-            secondary_color: '#A994FF',
+            secondary_color: '#B6FF3B',
             highlight_color: '#38BDF8',
             outline_color: '#090909',
             outline_width: 3,
@@ -463,7 +463,7 @@ const TEMPLATES = {
             line_height: 1.3,
             text_color: '#F1EFEA',
             secondary_color: '#D4CBFF',
-            highlight_color: '#A994FF',
+            highlight_color: '#B6FF3B',
             outline_color: 'transparent',
             outline_width: 0,
             shadow_color: 'rgba(169, 148, 255, 0.45)',
@@ -527,7 +527,7 @@ const TEMPLATES = {
             line_height: 1.35,
             text_color: '#F1EFEA',
             secondary_color: '#A09EA9',
-            highlight_color: '#A994FF',
+            highlight_color: '#B6FF3B',
             outline_color: '#090909',
             outline_width: 0,
             shadow_color: 'rgba(0,0,0,0.45)',
@@ -583,7 +583,7 @@ const TEMPLATES = {
             line_height: 1.3,
             text_color: 'rgba(241, 239, 234, 0.4)',
             secondary_color: '#F1EFEA',
-            highlight_color: '#A994FF',
+            highlight_color: '#B6FF3B',
             outline_color: '#090909',
             outline_width: 2,
             shadow_color: 'rgba(0,0,0,0.85)',
@@ -635,12 +635,12 @@ const TEMPLATES = {
                 }
 
                 if (isSung) {
-                    ctx.fillStyle = cfg.highlight_color || '#A994FF';
-                    ctx.shadowColor = cfg.glow_color || 'rgba(169, 148, 255, 0.7)';
+                    ctx.fillStyle = cfg.highlight_color || '#B6FF3B';
+                    ctx.shadowColor = cfg.glow_color || 'rgba(182, 255, 59, 0.7)';
                     ctx.shadowBlur = 10;
                 } else if (isSinging) {
-                    ctx.fillStyle = cfg.highlight_color || '#A994FF';
-                    ctx.shadowColor = cfg.glow_color || 'rgba(169, 148, 255, 0.7)';
+                    ctx.fillStyle = cfg.highlight_color || '#B6FF3B';
+                    ctx.shadowColor = cfg.glow_color || 'rgba(182, 255, 59, 0.7)';
                     ctx.shadowBlur = cfg.glow_size || 16;
                 } else {
                     ctx.fillStyle = cfg.text_color || 'rgba(241, 239, 234, 0.4)';
@@ -656,13 +656,72 @@ const TEMPLATES = {
     }
 };
 
-// --- Backwards-compatibility Aliases ---
+// --- Backwards-compatibility & Preset Aliases ---
 TEMPLATES['cinematic'] = TEMPLATES.midnight_cinema;
 TEMPLATES['minimal'] = TEMPLATES.minimal_verse;
 TEMPLATES['karaoke'] = TEMPLATES.karaoke_highlight;
 TEMPLATES['dreamy'] = TEMPLATES.dream_sequence;
 TEMPLATES['aesthetic'] = TEMPLATES.dream_sequence;
 TEMPLATES['kinetic'] = TEMPLATES.kinetic_type;
+TEMPLATES['atmospheric'] = TEMPLATES.soft_focus;
+
+// 8. Retro Wave
+TEMPLATES['retro_wave'] = {
+    id: 'retro_wave',
+    name: 'Retro Wave',
+    badge: '80s Synthwave',
+    description: 'Nostalgic synthwave aesthetics with glowing amber/magenta typography and CRT arcade atmosphere.',
+    defaults: {
+        font_family: "'JetBrains Mono', 'Courier New', monospace",
+        font_size: 46,
+        font_weight: '700',
+        letter_spacing: 2.5,
+        text_color: '#FFE57F',
+        secondary_color: '#FF007F',
+        highlight_color: '#FF007F',
+        outline_color: '#0E0514',
+        outline_width: 2,
+        shadow_color: 'rgba(255, 0, 127, 0.8)',
+        shadow_blur: 18,
+        glow_color: '#FF5500',
+        glow_size: 22,
+        text_align: 'center',
+        position_y: 75,
+        animation_type: 'typewriter',
+        background_color: '#0E0514',
+        overlay_opacity: 0.5
+    },
+    render(ctx, text, words, progress, width, height, cfg, currentTime = 0) {
+        ctx.save();
+        const posX = width * ((cfg.position_x !== undefined ? cfg.position_x : 50) / 100);
+        const posY = height * ((cfg.position_y !== undefined ? cfg.position_y : 75) / 100);
+        ctx.translate(posX, posY);
+
+        const fontSize = cfg.font_size * (height / 1080);
+        ctx.font = `${cfg.font_weight || '700'} ${fontSize}px ${cfg.font_family || "'JetBrains Mono', monospace"}`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.letterSpacing = `${cfg.letter_spacing || 2.5}px`;
+
+        // Typewriter effect length
+        const charCount = Math.max(1, Math.min(text.length, Math.floor(progress * text.length * 2.2)));
+        const visibleText = text.substring(0, charCount);
+
+        // Synthwave neon glow outline
+        ctx.shadowColor = cfg.glow_color || '#FF5500';
+        ctx.shadowBlur = cfg.glow_size || 22;
+        ctx.strokeStyle = cfg.highlight_color || '#FF007F';
+        ctx.lineWidth = 4;
+        ctx.strokeText(visibleText, 0, 0);
+
+        ctx.fillStyle = cfg.text_color || '#FFE57F';
+        ctx.fillText(visibleText, 0, 0);
+
+        ctx.restore();
+    }
+};
+TEMPLATES['retro'] = TEMPLATES.retro_wave;
+TEMPLATES['retro_arcade'] = TEMPLATES.retro_wave;
 
 // Optional Cyberpunk Neon Glow Template (preserves any existing neon project)
 TEMPLATES['neon'] = {
@@ -677,7 +736,7 @@ TEMPLATES['neon'] = {
         letter_spacing: 2.0,
         text_color: '#FFFFFF',
         secondary_color: '#00F2FE',
-        highlight_color: '#A994FF',
+        highlight_color: '#B6FF3B',
         outline_color: '#00F2FE',
         outline_width: 3,
         shadow_color: 'rgba(0, 242, 254, 0.9)',
@@ -737,20 +796,20 @@ TEMPLATES['visualizer'] = {
         font_weight: '700',
         letter_spacing: 1.5,
         text_color: '#F1EFEA',
-        secondary_color: '#A994FF',
+        secondary_color: '#B6FF3B',
         highlight_color: '#38BDF8',
-        outline_color: '#090909',
+        outline_color: '#08121E',
         outline_width: 2,
         shadow_color: 'rgba(0,0,0,0.85)',
         shadow_blur: 15,
-        glow_color: 'rgba(169, 148, 255, 0.7)',
+        glow_color: 'rgba(182, 255, 59, 0.7)',
         glow_size: 20,
         text_align: 'center',
         position_y: 65,
         animation_type: 'beat-pulse',
-        background_color: '#090909',
+        background_color: '#0C1A2B',
         overlay_opacity: 0.4,
-        visualizer_color: '#A994FF'
+        visualizer_color: '#B6FF3B'
     },
     render(ctx, text, words, progress, width, height, cfg, currentTime = 0) {
         const numBars = 48;
@@ -764,8 +823,8 @@ TEMPLATES['visualizer'] = {
             const barH = Math.max(4, Math.abs(freq) * (height * 0.16));
 
             const grad = ctx.createLinearGradient(0, baseY, 0, baseY - barH);
-            grad.addColorStop(0, cfg.visualizer_color || '#A994FF');
-            grad.addColorStop(1, '#D4CBFF');
+            grad.addColorStop(0, cfg.visualizer_color || '#B6FF3B');
+            grad.addColorStop(1, '#38BDF8');
 
             ctx.fillStyle = grad;
             ctx.fillRect(startX + i * barW + 2, baseY - barH, barW - 4, barH);
@@ -796,3 +855,4 @@ TEMPLATES['visualizer'] = {
         ctx.restore();
     }
 };
+TEMPLATES['neon_night'] = TEMPLATES.neon;

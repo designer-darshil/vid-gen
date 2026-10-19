@@ -1,26 +1,24 @@
 # LyricStudio 🎵🎬
 
-> A private, personal full-stack animated lyrics video creation website built with Python 3.13, Flask, FFmpeg, HTML5 Canvas, and modern modular JavaScript.
+> Professional AI-Powered Animated Lyrics Video Creation Website. Inspired by IMG.LY's video editor workflow and customized for music creators.
 
 ---
 
 ## Quick Start
 
-### 1. Start the Studio Application
-
-Using `npm`:
+### 1. Launch the Studio Application
 ```bash
 npm run dev
+# or
+.venv/bin/python wsgi.py --port 5001
 ```
+The studio runs at **[http://127.0.0.1:5001](http://127.0.0.1:5001)**.
 
-Or directly using Python in the virtual environment:
-```bash
-.venv/bin/python wsgi.py
-```
+### 2. Default Owner Credentials
+- **Username**: `admin`
+- **Password**: `StudioAdmin_2026!`
 
-The application will be running at **[http://127.0.0.1:5001](http://127.0.0.1:5001)** (or `http://localhost:5001`).
-
-### 2. Run Automated Tests
+### 3. Run Automated Tests
 ```bash
 npm test
 # or
@@ -29,75 +27,34 @@ npm test
 
 ---
 
-## Key Features
+## Redesigned IMG.LY-Inspired Architecture & Visual Identity
 
-1. **Private Owner Security**:
-   - First-run `/setup` owner creation with secure password hashing (`scrypt`).
-   - Brute-force rate limiting (5 failed attempts locks for 10 minutes).
-   - Strict session isolation: only the authenticated owner can access media and projects.
+LyricStudio has been redesigned with inspiration from [IMG.LY's CE.SDK Web Editor](https://github.com/imgly/starterkit-video-editor-ts-web), engineered specifically for animated lyrics video creation.
 
-2. **Song Audio & Lyrics Upload**:
-   - Audio formats: **MP3, WAV, M4A, AAC, FLAC, OGG** with automatic duration and metadata parsing.
-   - High-resolution timeline waveform generated via FFmpeg PCM decoding (800 normalized amplitude peaks).
-   - Lyrics input: **LRC** (line and word timestamps), **SRT** subtitle files, plain **TXT**, and direct text entry.
+### Visual Identity (DESIGN.md)
+- **Primary Accent**: VEED Coral Red (`#FF5454`) — used for primary actions, active tools, selected clips, playhead indicators, selection handles, and critical feedback.
+- **Main Background & Canvas**: Pure Black (`#000000`) — immersive, high-contrast creative editing environment.
+- **Text On Brand**: Soft Cream (`#FAFAF9`) — readable contrast on brand surfaces and dark panels.
+- **Dark Surfaces**: (`#0C0A09`, `#141414`, `#1C1C1C`) with subtle hairlines (`#222222`, `#333333`).
+- **Links & Navigation**: Muted Forest Green (`#3C6300`) — inline navigation and textual interactions.
+- **Accent Lime**: (`#9FD356`) — tertiary button & tag accents.
+- **Typography**: Geometric humanist Inter across all interface elements, strictly adhering to WCAG AAA contrast and $\ge$16px interface text.
 
-3. **Audio-to-Lyrics Synchronization**:
-   - **Auto-Align**: Audio energy envelope and onset syllable forced-alignment engine using FFmpeg and NumPy RMS energy clustering.
-   - **Auto-Transcribe**: Direct vocal burst detection and syllable segmentation for songs without lyrics.
-   - Interactive line-by-line timing correction, click-to-seek, and global millisecond offset calibration.
+### Workspace Layout
+- **Top Toolbar**: Quick project title editing, save status indicator, undo/redo (`Ctrl+Z`/`Ctrl+Y`), aspect ratio selector (16:9, 9:16, 2.39:1 CinemaScope, 1:1, 4:5), preview quality (Full / 0.5x), and instant Export.
+- **Left Creative Rail**: 8 dedicated tools:
+  1. **Media**: Upload song audio, cover artwork, and video clips.
+  2. **Lyrics**: Line-by-line timing, LRC/SRT subtitle import, and audio alignment.
+  3. **Text**: Preset typography blocks (Hero Title, Kinetic Verse, Subtitle).
+  4. **Backgrounds**: Artwork framing, solid/gradient canvas colors, and procedural themes.
+  5. **Motion**: Ken Burns motion presets (Slow Zoom In, Slow Zoom Out, Static).
+  6. **Effects**: Dimming, Gaussian blur, film grain, and glowing outlines.
+  7. **Transitions**: Scene transitions (Crossfade, Wipe Left, Wipe Right, Zoom Pulse, Cyber Glitch, Rack Blur).
+  8. **AI Studio**: Gemini 2.5 Flash Creative Director for automatic theme palettes, typography styling, and lyric alignment.
+- **Central Preview Canvas**: Interactive HTML5 Canvas preview with direct click-and-drag positioning, bounding boxes, corner resize handles, magnetic snap guides, and playhead synchronization.
+- **Right Inspector**: Real-time layer typography, font family, font size, tracking, alignment, color pickers, animation presets, and clip timing.
+- **Bottom Multitrack Timeline**: Time ruler, Coral Red playhead needle, lyrics track with draggable/trimmable clips, media track, and high-resolution dual-color audio waveform.
 
-4. **Interactive Multitrack Timeline**:
-   - Three dedicated tracks: **Lyrics**, **Images / B-Roll**, and **Audio Waveform**.
-   - Dual left/right resize handles for frame-accurate clip trimming.
-   - Clip dragging, splitting at playhead (`S`), deleting (`Del` / `Backspace`).
-   - Undo/Redo history stack (`Ctrl+Z` / `Ctrl+Y`) and debounced autosave.
-   - Zoom control slider (30 to 250 px/second).
-
-5. **6 Animated Lyric Templates**:
-   - **Cinematic Typography**: Letterbox bars, subtle scale drift, wide tracking, and deep filmic drop shadow.
-   - **Neon Glow**: Pulsing electric cyber tubes with multi-stage chromatic outer bloom and glowing stroke.
-   - **Minimal Typography**: Crisp Swiss typography with clean geometry and smooth slide fades.
-   - **Karaoke Word Highlighting**: Live syllable-by-syllable highlight wiping synchronized to audio.
-   - **Aesthetic Image Lyrics**: Frosted glass card typography floating over atmospheric visual B-roll.
-   - **Dynamic Music Visualizer**: Reactive audio equalizer spectrum bars pulsing rhythmically beneath the lyrics.
-
-6. **Custom Background Images & Motion**:
-   - Multi-image timeline lane with center-crop cover fitting.
-   - Ken Burns motion engine (Slow Zoom In, Slow Zoom Out, Static).
-   - Atmospheric controls: overlay dimming (0-1.0) and Gaussian blur (0-25px).
-
-7. **Multi-Resolution Video Rendering**:
-   - Export profiles: **720p, 1080p, 1440p, and 4K (3840x2160 or 2160x3840 for 9:16)**.
-   - Aspect ratios: **16:9 Landscape**, **9:16 Vertical (Shorts/Reels/TikTok)**, **1:1 Square**.
-   - Configurable frame rates: **24, 30, and 60 FPS**.
-   - Background multi-threaded rendering queue with live progress percentage (0-100%), error reporting, and direct MP4 download.
-
-8. **Zero-Config Sample Project**:
-   - Pre-seeded with "Midnight Drive" (synthesized melodic chord audio, 1080p cyberpunk horizon graphic, and synchronized neon lyrics).
-
----
-
-## Project Structure
-
-```text
-lyrics-video-generator/
-├── app/
-│   ├── blueprints/
-│   │   ├── auth.py          # Owner setup, login, logout, session management
-│   │   ├── dashboard.py     # Studio dashboard and project manager
-│   │   ├── editor.py        # Studio composition editor
-│   │   └── api.py           # REST endpoints for projects, assets, sync, and renders
-│   ├── models/
-│   │   └── database.py      # SQLite connection pool with WAL mode & datetime adapters
-│   ├── services/
-│   │   ├── auth_service.py     # Password hashing, lockout security
-│   │   ├── project_service.py  # Project CRUD, aspect ratio sizing
-│   │   ├── storage_service.py  # Path traversal safety, quotas, upload validation
-│   │   ├── sync_service.py     # LRC/SRT parsing, forced alignment, vocal transcription
-│   │   └── render_service.py   # Multi-threaded background FFmpeg rendering engine
-│   ├── static/
-│   │   ├── css/             # Dark-themed studio styling (auth, dashboard, editor, timeline)
-│   │   └── js/              # Modular JS (api, editor, preview, sync, templates, timeline)
 │   ├── templates/           # Jinja2 HTML5 studio templates
 │   └── utils/
 │       ├── sample_seed.py   # Built-in sample song and graphic generator

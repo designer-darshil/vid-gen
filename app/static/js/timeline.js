@@ -128,15 +128,19 @@ class TimelineEditor {
     renderRuler() {
         if (!this.ruler) return;
         this.ruler.innerHTML = '';
-        const stepSec = this.pixelsPerSecond > 120 ? 1 : (this.pixelsPerSecond > 60 ? 2 : 5);
+        const stepSec = this.pixelsPerSecond > 140 ? 1 : (this.pixelsPerSecond > 70 ? 2 : 5);
+        const subStep = 1;
 
-        for (let t = 0; t <= this.duration + 5; t += stepSec) {
+        for (let t = 0; t <= this.duration + 5; t += subStep) {
+            const isMajor = (t % stepSec === 0);
             const mark = document.createElement('div');
-            mark.className = 'ruler-mark';
+            mark.className = isMajor ? 'ruler-mark major' : 'ruler-mark minor';
             mark.style.left = `${t * this.pixelsPerSecond}px`;
-            const m = Math.floor(t / 60);
-            const s = Math.floor(t % 60);
-            mark.textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            if (isMajor) {
+                const m = Math.floor(t / 60);
+                const s = Math.floor(t % 60);
+                mark.textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            }
             this.ruler.appendChild(mark);
         }
     }
@@ -454,8 +458,8 @@ class TimelineEditor {
         if (this.peaks && this.peaks.length > 0) {
             const step = totalW / this.peaks.length;
             const grad = ctx.createLinearGradient(0, 0, 0, 42);
-            grad.addColorStop(0, '#A994FF');
-            grad.addColorStop(1, '#8B5CF6');
+            grad.addColorStop(0, '#B6FF3B');
+            grad.addColorStop(1, '#38BDF8');
             ctx.fillStyle = grad;
 
             for (let i = 0; i < this.peaks.length; i++) {
@@ -466,28 +470,22 @@ class TimelineEditor {
                 ctx.fillRect(x, y, Math.max(1, step - 0.5), barH);
             }
         } else {
-            // Stylized rhythmic waveform pattern when raw audio peaks are not yet loaded
-            const grad = ctx.createLinearGradient(0, 0, 0, 42);
-            grad.addColorStop(0, 'rgba(169, 148, 255, 0.45)');
-            grad.addColorStop(1, 'rgba(139, 92, 246, 0.2)');
-            ctx.fillStyle = grad;
-            const step = 4;
-            const numBars = Math.floor(totalW / step);
-            for (let i = 0; i < numBars; i++) {
-                const s1 = Math.sin(i * 0.15) * 0.5;
-                const s2 = Math.cos(i * 0.08) * 0.3;
-                const s3 = Math.sin(i * 0.4) * 0.2;
-                const amp = Math.max(0.12, Math.abs(s1 + s2 + s3));
-                const barH = amp * 32;
-                const y = (42 - barH) / 2;
-                ctx.fillRect(i * step, y, 2.5, barH);
-            }
-
-            // Clearly identified placeholder indicator until audio analysis is computed
+            // Honest empty state when no audio waveform is loaded
             ctx.save();
-            ctx.fillStyle = 'rgba(241, 239, 234, 0.55)';
-            ctx.font = '500 13px "Geist", "Inter", sans-serif';
-            ctx.fillText('AUDIO TRACK • PLACEHOLDER WAVEFORM (UPLOAD AUDIO TO ANALYZE)', 24, 25);
+            ctx.strokeStyle = '#1D3757';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([8, 8]);
+            ctx.beginPath();
+            ctx.moveTo(0, 21);
+            ctx.lineTo(totalW, 21);
+            ctx.stroke();
+
+            ctx.setLineDash([]);
+            ctx.fillStyle = '#5E7594';
+            ctx.font = '500 13px "Inter", sans-serif';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('✦ No Audio Track Connected • Upload Song Audio in Media Drawer to Display Waveform', 28, 21);
             ctx.restore();
         }
     }
