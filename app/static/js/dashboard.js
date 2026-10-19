@@ -2,6 +2,208 @@
  * LyricStudio Dashboard Logic
  */
 let selectedAspect = '16:9';
+let heroSelectedAspect = '16:9';
+let heroAudioFile = null;
+let heroArtworkFile = null;
+
+// --- AI Creative Director Studio Hero Handlers ---
+
+function selectHeroAspect(aspect) {
+    heroSelectedAspect = aspect;
+    document.querySelectorAll('.ai-aspect-chip').forEach(chip => {
+        if (chip.getAttribute('data-aspect') === aspect) {
+            chip.classList.add('selected');
+        } else {
+            chip.classList.remove('selected');
+        }
+    });
+}
+
+function handleHeroAudioSelect(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    setHeroAudioFile(file);
+}
+
+function setHeroAudioFile(file) {
+    heroAudioFile = file;
+    document.getElementById('hero-audio-empty').style.display = 'none';
+    document.getElementById('hero-audio-filled').style.display = 'block';
+    document.getElementById('hero-audio-name').textContent = file.name;
+    const mb = (file.size / (1024 * 1024)).toFixed(2);
+    document.getElementById('hero-audio-size').textContent = `${mb} MB • Audio Track`;
+    updateHeroGenerateButton();
+}
+
+function clearHeroAudio(e) {
+    if (e) e.stopPropagation();
+    heroAudioFile = null;
+    document.getElementById('hero-audio-file').value = '';
+    document.getElementById('hero-audio-filled').style.display = 'none';
+    document.getElementById('hero-audio-empty').style.display = 'block';
+    updateHeroGenerateButton();
+}
+
+function handleHeroArtworkSelect(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    setHeroArtworkFile(file);
+}
+
+function setHeroArtworkFile(file) {
+    heroArtworkFile = file;
+    document.getElementById('hero-artwork-empty').style.display = 'none';
+    document.getElementById('hero-artwork-filled').style.display = 'block';
+    document.getElementById('hero-artwork-name').textContent = file.name;
+    const mb = (file.size / (1024 * 1024)).toFixed(2);
+    document.getElementById('hero-artwork-size').textContent = `${mb} MB • Cover Art`;
+}
+
+function clearHeroArtwork(e) {
+    if (e) e.stopPropagation();
+    heroArtworkFile = null;
+    document.getElementById('hero-artwork-file').value = '';
+    document.getElementById('hero-artwork-filled').style.display = 'none';
+    document.getElementById('hero-artwork-empty').style.display = 'block';
+}
+
+function updateHeroGenerateButton() {
+    const btn = document.getElementById('btn-hero-generate');
+    if (btn) {
+        btn.disabled = !heroAudioFile;
+    }
+}
+
+// Drag & Drop Listeners
+document.addEventListener('DOMContentLoaded', () => {
+    const audioDrop = document.getElementById('hero-audio-dropzone');
+    const artDrop = document.getElementById('hero-artwork-dropzone');
+
+    if (audioDrop) {
+        ['dragenter', 'dragover'].forEach(name => {
+            audioDrop.addEventListener(name, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                audioDrop.classList.add('drag-active');
+            });
+        });
+        ['dragleave', 'drop'].forEach(name => {
+            audioDrop.addEventListener(name, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                audioDrop.classList.remove('drag-active');
+            });
+        });
+        audioDrop.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files && files.length > 0) {
+                setHeroAudioFile(files[0]);
+            }
+        });
+    }
+
+    if (artDrop) {
+        ['dragenter', 'dragover'].forEach(name => {
+            artDrop.addEventListener(name, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                artDrop.classList.add('drag-active');
+            });
+        });
+        ['dragleave', 'drop'].forEach(name => {
+            artDrop.addEventListener(name, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                artDrop.classList.remove('drag-active');
+            });
+        });
+        artDrop.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files && files.length > 0) {
+                setHeroArtworkFile(files[0]);
+            }
+        });
+    }
+});
+
+async function startAIDraftGeneration() {
+    if (!heroAudioFile) {
+        showToast('Please select or drop an audio track first.', 'error');
+        return;
+    }
+
+    const modal = document.getElementById('ai-progress-modal');
+    if (modal) modal.style.display = 'flex';
+
+    // Progressive step highlighter
+    let currentStep = 1;
+    const stepInterval = setInterval(() => {
+        if (currentStep < 5) {
+            const prevRow = document.getElementById(`step-row-${currentStep}`);
+            if (prevRow) {
+                prevRow.classList.remove('active');
+                prevRow.classList.add('done');
+                prevRow.querySelector('.ai-step-icon').innerHTML = '<i class="fa-solid fa-check"></i>';
+            }
+            currentStep++;
+            const nextRow = document.getElementById(`step-row-${currentStep}`);
+            if (nextRow) nextRow.classList.add('active');
+        }
+    }, 1800);
+
+    try {
+        const formData = new FormData();
+        formData.append('audio_file', heroAudioFile);
+        if (heroArtworkFile) {
+            formData.append('artwork_file', heroArtworkFile);
+        }
+        formData.append('aspect_ratio', heroSelectedAspect);
+        formData.append('title', heroAudioFile.name.replace(/\.[^/.]+$/, ''));
+
+        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        const headers = {};
+        if (csrfMeta && csrfMeta.content) {
+            headers['X-CSRFToken'] = csrfMeta.content;
+        }
+
+        const res = await fetch('/api/ai/create-draft', {
+            method: 'POST',
+            body: formData,
+            headers
+        });
+
+        clearInterval(stepInterval);
+
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || `Failed with HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        // Mark all steps complete
+        for (let s = 1; s <= 6; s++) {
+            const row = document.getElementById(`step-row-${s}`);
+            if (row) {
+                row.classList.remove('active');
+                row.classList.add('done');
+                row.querySelector('.ai-step-icon').innerHTML = '<i class="fa-solid fa-check"></i>';
+            }
+        }
+
+        document.getElementById('ai-progress-status-text').textContent = 'Draft ready! Launching Creative Studio...';
+        setTimeout(() => {
+            window.location.href = data.redirect_url || `/editor/${data.project.id}`;
+        }, 800);
+
+    } catch (err) {
+        clearInterval(stepInterval);
+        if (modal) modal.style.display = 'none';
+        showToast(err.message || 'AI Draft generation encountered an error.', 'error');
+    }
+}
+
 
 function openNewProjectModal() {
     document.getElementById('proj-title').value = '';

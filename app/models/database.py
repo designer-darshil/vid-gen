@@ -110,12 +110,18 @@ def init_db(app=None):
         lyrics_data TEXT DEFAULT '[]',
         timeline_data TEXT DEFAULT '{}',
         template_data TEXT DEFAULT '{}',
+        scene_data TEXT DEFAULT '[]',
         thumbnail_path TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
     """)
+
+    cursor.execute("PRAGMA table_info(projects);")
+    existing_proj_cols = {row[1] for row in cursor.fetchall()}
+    if "scene_data" not in existing_proj_cols:
+        cursor.execute("ALTER TABLE projects ADD COLUMN scene_data TEXT DEFAULT '[]';")
 
     # Assets table
     cursor.execute("""

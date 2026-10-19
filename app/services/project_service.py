@@ -17,12 +17,12 @@ DEFAULT_TEMPLATE_CONFIG = {
     "line_height": 1.3,
     "text_color": "#F1EFEA",
     "secondary_color": "#A09EA9",
-    "highlight_color": "#A994FF",
-    "outline_color": "#090909",
+    "highlight_color": "#B6FF3B",
+    "outline_color": "#0C1A2B",
     "outline_width": 2,
     "shadow_color": "rgba(0, 0, 0, 0.85)",
     "shadow_blur": 16,
-    "glow_color": "rgba(169, 148, 255, 0.4)",
+    "glow_color": "rgba(182, 255, 59, 0.45)",
     "glow_size": 20,
     "text_align": "center",
     "position_y": 74,  # percentage from top
@@ -119,6 +119,7 @@ class ProjectService:
         project["lyrics_data"] = json.loads(project["lyrics_data"] or "[]")
         project["timeline_data"] = json.loads(project["timeline_data"] or "{}")
         project["template_data"] = json.loads(project["template_data"] or "{}")
+        project["scene_data"] = json.loads(project.get("scene_data") or "[]")
 
         # Fetch linked assets
         asset_rows = db.execute("""
@@ -165,12 +166,12 @@ class ProjectService:
     def update_project(project_id: str, user_id: int, updates: dict) -> bool:
         allowed_keys = {
             "title", "description", "aspect_ratio", "width", "height", "fps", "duration",
-            "audio_asset_id", "lyrics_data", "timeline_data", "template_data", "thumbnail_path"
+            "audio_asset_id", "lyrics_data", "timeline_data", "template_data", "scene_data", "thumbnail_path"
         }
         filtered = {}
         for k, v in updates.items():
             if k in allowed_keys:
-                if k in ("lyrics_data", "timeline_data", "template_data") and not isinstance(v, str):
+                if k in ("lyrics_data", "timeline_data", "template_data", "scene_data") and not isinstance(v, str):
                     filtered[k] = json.dumps(v)
                 else:
                     filtered[k] = v

@@ -45,13 +45,89 @@
 
     <!-- Main Content -->
     <main class="dashboard-content">
+        <!-- AI Creative Director Studio Hero -->
+        <section class="ai-studio-hero" aria-label="AI Creation Studio">
+            <div class="ai-hero-header">
+                <div class="ai-hero-badge">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> AI Director • Stage 1–7 Pipeline
+                </div>
+                <h2 class="ai-hero-title">Create Cinematic Lyric Video with AI</h2>
+                <p class="ai-hero-subtitle">
+                    Upload your audio track. AI Director automatically analyzes acoustic energy, extracts tempo, transcribes timestamps, directs visual mood, and builds your complete, editable scene draft.
+                </p>
+            </div>
+
+            <div class="ai-studio-grid">
+                <!-- 1. Audio Dropzone (Required) -->
+                <div class="ai-dropzone" id="hero-audio-dropzone" onclick="document.getElementById('hero-audio-file').click()">
+                    <input type="file" id="hero-audio-file" accept="audio/*,.mp3,.wav,.m4a,.flac" style="display: none;" onchange="handleHeroAudioSelect(event)">
+                    <div id="hero-audio-empty">
+                        <i class="fa-solid fa-music ai-dropzone-icon"></i>
+                        <div class="ai-dropzone-title">Upload Audio Track (Required)</div>
+                        <div class="ai-dropzone-sub">Drop MP3, WAV, M4A, or FLAC song file</div>
+                    </div>
+                    <div id="hero-audio-filled" style="display: none; width: 100%;">
+                        <div class="ai-file-pill">
+                            <i class="fa-solid fa-circle-check" style="color: #B6FF3B; font-size: 18px;"></i>
+                            <div class="ai-file-pill-info">
+                                <div class="ai-file-pill-name" id="hero-audio-name">song.mp3</div>
+                                <div class="ai-file-pill-meta" id="hero-audio-size">0 MB</div>
+                            </div>
+                            <button type="button" class="btn-icon" onclick="clearHeroAudio(event)" title="Remove audio" style="color: var(--text-muted);">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Artwork Dropzone (Optional) -->
+                <div class="ai-dropzone" id="hero-artwork-dropzone" onclick="document.getElementById('hero-artwork-file').click()">
+                    <input type="file" id="hero-artwork-file" accept="image/*,.jpg,.jpeg,.png,.webp" style="display: none;" onchange="handleHeroArtworkSelect(event)">
+                    <div id="hero-artwork-empty">
+                        <i class="fa-solid fa-image ai-dropzone-icon"></i>
+                        <div class="ai-dropzone-title">Background Artwork (Optional)</div>
+                        <div class="ai-dropzone-sub">Drop cover art for Ken Burns motion & color harmony</div>
+                    </div>
+                    <div id="hero-artwork-filled" style="display: none; width: 100%;">
+                        <div class="ai-file-pill">
+                            <i class="fa-solid fa-circle-check" style="color: #B6FF3B; font-size: 18px;"></i>
+                            <div class="ai-file-pill-info">
+                                <div class="ai-file-pill-name" id="hero-artwork-name">cover.jpg</div>
+                                <div class="ai-file-pill-meta" id="hero-artwork-size">0 MB</div>
+                            </div>
+                            <button type="button" class="btn-icon" onclick="clearHeroArtwork(event)" title="Remove artwork" style="color: var(--text-muted);">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Controls -->
+            <div class="ai-studio-footer">
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <div style="font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Aspect Ratio:</div>
+                    <div class="ai-aspect-chips" id="hero-aspect-chips">
+                        <button type="button" class="ai-aspect-chip selected" data-aspect="16:9" onclick="selectHeroAspect('16:9')">16:9 Cinema</button>
+                        <button type="button" class="ai-aspect-chip" data-aspect="9:16" onclick="selectHeroAspect('9:16')">9:16 Shorts / Reels</button>
+                        <button type="button" class="ai-aspect-chip" data-aspect="1:1" onclick="selectHeroAspect('1:1')">1:1 Square</button>
+                    </div>
+                </div>
+
+                <button type="button" class="btn-generate-ai" id="btn-hero-generate" onclick="startAIDraftGeneration()" disabled>
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span>Generate Video Draft</span>
+                </button>
+            </div>
+        </section>
+
         <div class="dashboard-header">
             <div>
-                <h1>Projects</h1>
-                <p>Create and edit animated lyrics video compositions</p>
+                <h1>Projects Library</h1>
+                <p>All saved animated lyric video compositions</p>
             </div>
-            <button class="btn btn-primary" onclick="openNewProjectModal()">
-                <i class="fa-solid fa-plus"></i> New project
+            <button class="btn btn-secondary" onclick="openNewProjectModal()">
+                <i class="fa-solid fa-plus"></i> Blank Project
             </button>
         </div>
 
@@ -175,7 +251,7 @@
                     <span class="badge" id="modal-gemini-badge">Checking...</span>
                 </div>
                 <p style="font-size: 16px; color: var(--text-secondary); margin: 10px 0 16px 0; line-height: 1.5;">
-                    LyricStudio uses Gemini 2.5 Flash for multimodal lyric analysis, intelligent composition proposals, and neural vocal transcription.
+                    LyricStudio uses Google Gemini Flash (gemini-3.8-flash) for multimodal lyric analysis, intelligent composition proposals, and neural vocal transcription.
                 </p>
 
                 <div class="prop-row" style="display: flex; flex-direction: column; gap: 6px;">
@@ -219,6 +295,43 @@
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary" onclick="closeModal('ai-settings-modal')">Close</button>
+        </div>
+<!-- AI Generation Progress Overlay -->
+<div class="ai-progress-modal" id="ai-progress-modal">
+    <div class="ai-progress-card">
+        <div style="width: 52px; height: 52px; margin: 0 auto 16px auto; border-radius: 50%; background: rgba(182, 255, 59, 0.12); border: 2px solid #B6FF3B; display: flex; align-items: center; justify-content: center; color: #B6FF3B; font-size: 24px;">
+            <i class="fa-solid fa-wand-magic-sparkles" id="ai-progress-spinner" style="animation: spin 2s linear infinite;"></i>
+        </div>
+        <h3 style="font-size: 20px; font-weight: 700; color: var(--text-primary); margin: 0 0 6px 0;">Directing Lyric Video Draft...</h3>
+        <p style="font-size: 13px; color: var(--text-secondary); margin: 0;" id="ai-progress-status-text">
+            Executing 7-stage autonomous AI Creative Director pipeline
+        </p>
+
+        <div class="ai-step-indicator" id="ai-step-indicator">
+            <div class="ai-step-row active" id="step-row-1">
+                <span class="ai-step-icon"><i class="fa-solid fa-music"></i></span>
+                <span>Stage 1: Ingesting audio & acoustic envelope</span>
+            </div>
+            <div class="ai-step-row" id="step-row-2">
+                <span class="ai-step-icon"><i class="fa-solid fa-align-left"></i></span>
+                <span>Stage 2: Transcribing lyrics & timestamps</span>
+            </div>
+            <div class="ai-step-row" id="step-row-3">
+                <span class="ai-step-icon"><i class="fa-solid fa-check-double"></i></span>
+                <span>Stage 3: Normalizing & confidence scoring</span>
+            </div>
+            <div class="ai-step-row" id="step-row-4">
+                <span class="ai-step-icon"><i class="fa-solid fa-palette"></i></span>
+                <span>Stage 4: Directing mood & kinetic typography</span>
+            </div>
+            <div class="ai-step-row" id="step-row-5">
+                <span class="ai-step-icon"><i class="fa-solid fa-layer-group"></i></span>
+                <span>Stage 5: Generating Scene Plan (Schema v1.0.0)</span>
+            </div>
+            <div class="ai-step-row" id="step-row-6">
+                <span class="ai-step-icon"><i class="fa-solid fa-video"></i></span>
+                <span>Stage 6: Assembling editable studio project</span>
+            </div>
         </div>
     </div>
 </div>

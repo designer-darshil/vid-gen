@@ -586,8 +586,13 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                 stderr_output = proc.stderr.read()
                 raise RuntimeError(f"FFmpeg exited with error code {proc.returncode}: {stderr_output[-500:]}")
 
+            from app.services.ai_director import AIDirector
+            val_res = AIDirector.validate_video_output(str(final_output_path), expected_duration=total_duration)
+            if not val_res.get("valid", True):
+                raise RuntimeError(f"Output validation failed: {val_res.get('error', 'Invalid video output')}")
+
             cls._update_job_status(job_id, "completed", 100, output_file=out_filename)
-            logger.info("Render job %s completed successfully: %s", job_id, final_output_path)
+            logger.info("Render job %s completed successfully: %s (Validation: %s)", job_id, final_output_path, val_res)
 
         except Exception as e:
             logger.exception("Render job %s failed: %s", job_id, e)

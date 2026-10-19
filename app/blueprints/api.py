@@ -7,6 +7,7 @@ from app.services.storage_service import StorageService
 from app.services.sync_service import SyncService
 from app.services.render_service import RenderService
 from app.services.ai_service import AIService
+from app.services.ai_director import AIDirector
 from app.models.database import get_db
 from config import RENDERS_DIR
 
@@ -240,7 +241,7 @@ def get_ai_settings():
         "success": True,
         "configured": is_conf,
         "masked_key": masked_key,
-        "provider": "Google Gemini (gemini-2.5-flash)"
+        "provider": "Google Gemini (gemini-3.8-flash)"
     })
 
 @api_bp.route("/settings/ai", methods=["POST"])
@@ -330,6 +331,130 @@ def ai_apply_proposal(project_id: str):
 
     ProjectService.update_project(project_id, user_id, {"template_data": updated_template})
     return jsonify({"success": True, "template_data": updated_template})
+
+# --- AI Director Autonomous Drafting & Scenes ---
+
+@api_bp.route("/ai/create-draft", methods=["POST"])
+@login_required
+def ai_create_draft():
+    user_id = session["user_id"]
+    audio_asset_id = None
+    artwork_asset_id = None
+    song_title = ""
+    aspect_ratio = "16:9"
+    quality = "1080p"
+
+    if request.content_type and "multipart/form-data" in request.content_type:
+        song_title = request.form.get("title", "").strip()
+        aspect_ratio = request.form.get("aspect_ratio", "16:9")
+        quality = request.form.get("quality", "1080p")
+        audio_asset_id = request.form.get("audio_asset_id")
+        artwork_asset_id = request.form.get("artwork_asset_id")
+
+        if "audio_file" in request.files:
+            file = request.files["audio_file"]
+            if file and file.filename:
+                res = StorageService.save_uploaded_file(file, user_id=user_id, project_id="", asset_type="audio")
+                audio_asset_id = res["id"]
+                if not song_title:
+                    song_title = Path(res["original_name"]).stem
+
+        if "artwork_file" in request.files:
+            art_file = request.files["artwork_file"]
+            if art_file and art_file.filename:
+                res = StorageService.save_uploaded_file(art_file, user_id=user_id, project_id="", asset_type="image")
+                artwork_asset_id = res["id"]
+    else:
+        data = request.get_json() or {}
+        song_title = data.get("title", "").strip()
+        aspect_ratio = data.get("aspect_ratio", "16:9")
+        quality = data.get("quality", "1080p")
+        audio_asset_id = data.get("audio_asset_id")
+        artwork_asset_id = data.get("artwork_asset_id")
+
+    if not audio_asset_id:
+        return jsonify({"error": "Audio track is required to create an animated lyric video."}), 400
+
+    try:
+        draft = AIDirector.create_first_video_draft(
+            user_id=user_id,
+            song_title=song_title,
+            audio_asset_id=audio_asset_id,
+            artwork_asset_id=artwork_asset_id,
+            aspect_ratio=aspect_ratio,
+            quality=quality
+        )
+        return jsonify({
+            "success": True,
+            "project": draft["project"],
+            "scene_plan": draft["scene_plan"],
+            "redirect_url": f"/editor/{draft['project']['id']}"
+        }), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@api_bp.route("/projects/<project_id>/scenes", methods=["GET", "PUT"])
+@login_required
+def handle_project_scenes(project_id: str):
+    user_id = session["user_id"]
+    project = ProjectService.get_project(project_id, user_id)
+    if not project:
+        return jsonify({"error": "Project not found"}), 404
+
+    if request.method == "GET":
+        db = get_db()
+        row = db.execute("SELECT scene_data FROM projects WHERE id = ? AND user_id = ?", (project_id, user_id)).fetchone()
+        scene_data = json.loads(row["scene_data"]) if row and row["scene_data"] and row["scene_data"] != "[]" else None
+
+        if not scene_data:
+            lyrics = project.get("lyrics_data", [])
+            template = project.get("template_data", {})
+            duration = float(project.get("duration", 30.0))
+            mood_dir = {
+                "preset": template.get("template_id", "midnight_cinema"),
+                "mood_name": template.get("template_id", "midnight_cinema").replace("_", " ").title(),
+                "font_family": template.get("font_family", "'Cinzel', serif"),
+                "font_size": template.get("font_size", 56),
+                "font_weight": template.get("font_weight", "700"),
+                "letter_spacing": template.get("letter_spacing", 3.0),
+                "text_color": template.get("text_color", "#F1EFEA"),
+                "highlight_color": template.get("highlight_color", "#B6FF3B"),
+                "glow_color": template.get("glow_color", "rgba(182, 255, 59, 0.45)"),
+                "outline_color": template.get("outline_color", "#0C1A2B"),
+                "outline_width": template.get("outline_width", 2),
+                "animation_type": template.get("animation_type", "cinematic-rise"),
+                "animation_duration": template.get("animation_duration", 0.5),
+                "beat_pulse": template.get("beat_pulse", True),
+                "overlay_opacity": template.get("overlay_opacity", 0.4),
+                "ken_burns": template.get("bg_zoom", "zoom-in")
+            }
+            art_id = None
+            for a in project.get("assets", []):
+                if a.get("asset_type") == "image":
+                    art_id = a.get("id")
+                    break
+            scene_data = AIDirector.generate_structured_scene_plan(
+                song_title=project.get("title", ""),
+                lyrics=lyrics,
+                mood_direction=mood_dir,
+                total_duration=duration,
+                artwork_asset_id=art_id
+            )
+        return jsonify({"success": True, "scene_plan": scene_data})
+
+    data = request.get_json() or {}
+    try:
+        validated_plan = AIDirector.validate_scene_plan(data)
+        db = get_db()
+        db.execute("""
+            UPDATE projects
+            SET scene_data = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND user_id = ?
+        """, (json.dumps(validated_plan), project_id, user_id))
+        db.commit()
+        return jsonify({"success": True, "scene_plan": validated_plan})
+    except Exception as e:
+        return jsonify({"error": f"Invalid scene schema: {str(e)}"}), 400
 
 # --- Rendering ---
 
