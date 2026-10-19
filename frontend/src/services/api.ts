@@ -111,6 +111,40 @@ export const API = {
     });
   },
 
+  // Conversational AI Editor (OpusClip Producer Mode)
+  async chatWithAI(projectId: string, message: string, currentTime = 0): Promise<{
+    success: boolean;
+    action: string;
+    summary: string;
+    applied_changes: Array<{ field: string; old_value: any; new_value: any; description: string }>;
+    project: Project;
+    can_undo: boolean;
+  }> {
+    return request(`/api/projects/${projectId}/chat`, {
+      method: 'POST',
+      body: JSON.stringify({ message, current_time: currentTime })
+    });
+  },
+
+  async getChatHistory(projectId: string): Promise<{
+    success: boolean;
+    history: Array<{ id: string; role: 'user' | 'assistant'; message: string; summary: string; applied_changes: any[]; created_at: string }>;
+  }> {
+    return request(`/api/projects/${projectId}/chat`);
+  },
+
+  async undoChatEdit(projectId: string): Promise<{
+    success: boolean;
+    action: string;
+    summary: string;
+    project: Project;
+    can_undo: boolean;
+  }> {
+    return request(`/api/projects/${projectId}/chat/undo`, {
+      method: 'POST'
+    });
+  },
+
   // Render & Export
   async triggerRender(projectId: string, resolution = '1080p', fps = 30): Promise<{ success: boolean; job_id: string }> {
     return request<{ success: boolean; job_id: string }>(`/api/projects/${projectId}/render`, {

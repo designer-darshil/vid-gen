@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronRight, Sliders, Film, Mountain, Layers, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
+import { ChevronRight, Sliders, Film, Mountain, Layers, AlignLeft, AlignCenter, AlignRight, Clapperboard } from 'lucide-react';
 import { Project, TemplateConfig } from '../types';
 
 interface RightInspectorProps {
@@ -12,6 +12,7 @@ interface RightInspectorProps {
   onUpdateLyrics?: (lines: any[]) => void;
   onUpdateTimelineData?: (tracks: any[]) => void;
   onSeek?: (time: number) => void;
+  onUpdateProject?: (p: Project) => void;
 }
 
 export const RightInspector: React.FC<RightInspectorProps> = ({
@@ -23,9 +24,10 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
   onSelectClip,
   onUpdateLyrics,
   onUpdateTimelineData,
-  onSeek
+  onSeek,
+  onUpdateProject
 }) => {
-  const [tab, setTab] = useState<'layer' | 'motion' | 'backdrop' | 'project'>('layer');
+  const [tab, setTab] = useState<'scenes' | 'layer' | 'motion' | 'backdrop' | 'project'>('scenes');
   const cfg = project.template_data || {};
 
   // Selected clip resolution
@@ -87,8 +89,8 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
           gap: '4px'
         }}
       >
-        <div style={{ display: 'flex', gap: '4px', flex: 1 }}>
-          {(['layer', 'motion', 'backdrop', 'project'] as const).map((t) => {
+        <div style={{ display: 'flex', gap: '3px', flex: 1, overflowX: 'auto' }}>
+          {(['scenes', 'layer', 'motion', 'backdrop', 'project'] as const).map((t) => {
             const isActive = tab === t;
             return (
               <button
@@ -102,14 +104,16 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
                   borderColor: isActive ? 'rgba(182, 255, 59, 0.35)' : 'transparent',
                   borderRadius: 'var(--radius-sm)',
                   color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                  fontSize: '12px',
+                  fontSize: '11px',
                   fontWeight: isActive ? 700 : 500,
                   textTransform: 'capitalize',
                   cursor: 'pointer',
-                  transition: 'all var(--transition-fast)'
+                  transition: 'all var(--transition-fast)',
+                  padding: '0 4px',
+                  whiteSpace: 'nowrap'
                 }}
               >
-                {t === 'backdrop' ? 'Backdrop' : t}
+                {t === 'backdrop' ? 'Backdrop' : t === 'scenes' ? 'Scenes' : t}
               </button>
             );
           })}
@@ -382,6 +386,115 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
             >
               Seek to Start
             </button>
+          </div>
+        )}
+
+        {/* 0. SCENES TAB */}
+        {tab === 'scenes' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Clapperboard size={15} style={{ color: 'var(--accent-primary)' }} />
+                AI Editing Plan ({project.scene_data?.length || 0} Scenes)
+              </span>
+            </div>
+
+            {(!project.scene_data || project.scene_data.length === 0) && (
+              <div style={{ padding: '16px', background: 'var(--surface-elevated)', border: '1px dashed var(--border-subtle)', borderRadius: 'var(--radius-md)', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>
+                No structured scene plan yet. Use AI Studio or upload a song to generate a multi-scene editing draft.
+              </div>
+            )}
+
+            {project.scene_data?.map((sc: any, idx: number) => {
+              const start = sc.start || 0;
+              const end = sc.end || 0;
+              const duration = (end - start).toFixed(1);
+
+              return (
+                <div
+                  key={sc.scene_id || idx}
+                  style={{
+                    padding: '12px',
+                    background: 'var(--surface-elevated)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: 'var(--radius-md)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent-primary)' }}>
+                      Scene {idx + 1}
+                    </span>
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      style={{ fontSize: '10px', height: '22px', padding: '0 6px', fontFamily: 'var(--font-mono)' }}
+                      onClick={() => onSeek && onSeek(start)}
+                      title="Seek playhead to scene start"
+                    >
+                      {start.toFixed(1)}s - {end.toFixed(1)}s ({duration}s)
+                    </button>
+                  </div>
+
+                  {/* Transition Selector */}
+                  <div>
+                    <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: '2px' }}>
+                      Transition Effect
+                    </label>
+                    <select
+                      value={sc.transition?.type || 'crossfade'}
+                      onChange={(e) => {
+                        if (!onUpdateProject || !project.scene_data) return;
+                        const updated = [...project.scene_data];
+                        updated[idx] = {
+                          ...updated[idx],
+                          transition: { ...(updated[idx].transition || {}), type: e.target.value }
+                        };
+                        onUpdateProject({ ...project, scene_data: updated });
+                      }}
+                      className="form-control"
+                      style={{ width: '100%', fontSize: '11px', padding: '4px 6px' }}
+                    >
+                      <option value="crossfade">Crossfade</option>
+                      <option value="dissolve">Dissolve</option>
+                      <option value="slide-left">Slide Left</option>
+                      <option value="zoom-in">Zoom In</option>
+                      <option value="fade-black">Fade to Black</option>
+                      <option value="whip-pan">Whip Pan</option>
+                    </select>
+                  </div>
+
+                  {/* Camera Motion */}
+                  <div>
+                    <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: '2px' }}>
+                      Camera Motion (Ken Burns)
+                    </label>
+                    <select
+                      value={sc.backdrop?.ken_burns || 'zoom-in'}
+                      onChange={(e) => {
+                        if (!onUpdateProject || !project.scene_data) return;
+                        const updated = [...project.scene_data];
+                        updated[idx] = {
+                          ...updated[idx],
+                          backdrop: { ...(updated[idx].backdrop || {}), ken_burns: e.target.value }
+                        };
+                        onUpdateProject({ ...project, scene_data: updated });
+                      }}
+                      className="form-control"
+                      style={{ width: '100%', fontSize: '11px', padding: '4px 6px' }}
+                    >
+                      <option value="zoom-in">Zoom In (Gentle Push)</option>
+                      <option value="zoom-out">Zoom Out (Reveal)</option>
+                      <option value="pan-left">Pan Left</option>
+                      <option value="pan-right">Pan Right</option>
+                      <option value="subtle-drift">Subtle Drift</option>
+                      <option value="static">Static (No Motion)</option>
+                    </select>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 

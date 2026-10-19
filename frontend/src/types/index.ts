@@ -111,6 +111,7 @@ export interface Project {
   lyrics_data: LyricLine[];
   timeline_data: TimelineData;
   template_data: TemplateConfig;
+  scene_data?: any[];
   assets?: Asset[];
   created_at?: string;
   updated_at?: string;

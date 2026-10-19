@@ -8,6 +8,7 @@ from app.services.sync_service import SyncService
 from app.services.render_service import RenderService
 from app.services.ai_service import AIService
 from app.services.ai_director import AIDirector
+from app.services.conversational_agent import ConversationalAgent
 from app.models.database import get_db
 from config import RENDERS_DIR
 
@@ -332,6 +333,37 @@ def ai_apply_proposal(project_id: str):
 
     ProjectService.update_project(project_id, user_id, {"template_data": updated_template})
     return jsonify({"success": True, "template_data": updated_template})
+
+# --- Conversational AI Editor Agent (OpusClip Producer Experience) ---
+
+@api_bp.route("/projects/<project_id>/chat", methods=["GET", "POST"])
+@login_required
+def handle_project_chat(project_id: str):
+    user_id = session["user_id"]
+    if request.method == "GET":
+        history = ConversationalAgent.get_chat_history(project_id, user_id)
+        return jsonify({"success": True, "history": history})
+
+    data = request.get_json() or {}
+    message = data.get("message", "").strip()
+    current_time = float(data.get("current_time", 0.0))
+
+    if not message:
+        return jsonify({"error": "Message is required."}), 400
+
+    result = ConversationalAgent.chat(project_id, user_id, message, current_time=current_time)
+    if not result.get("success"):
+        return jsonify(result), 400
+    return jsonify(result)
+
+@api_bp.route("/projects/<project_id>/chat/undo", methods=["POST"])
+@login_required
+def undo_chat_edit(project_id: str):
+    user_id = session["user_id"]
+    result = ConversationalAgent.undo_last_change(project_id, user_id)
+    if not result.get("success"):
+        return jsonify(result), 400
+    return jsonify(result)
 
 # --- AI Director Autonomous Drafting & Scenes ---
 

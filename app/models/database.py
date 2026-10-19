@@ -180,6 +180,36 @@ def init_db(app=None):
     );
     """)
 
+    # Project snapshots table for undo history and state recovery
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS project_snapshots (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL,
+        user_id INTEGER NOT NULL,
+        snapshot_data TEXT NOT NULL,
+        description TEXT DEFAULT '',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    );
+    """)
+
+    # Project conversational editing chat history
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS project_chat_messages (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL,
+        user_id INTEGER NOT NULL,
+        role TEXT NOT NULL,
+        message TEXT NOT NULL,
+        summary TEXT DEFAULT '',
+        applied_changes TEXT DEFAULT '[]',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    );
+    """)
+
     conn.commit()
     conn.close()
     logger.info("Database initialized successfully at %s", db_path)

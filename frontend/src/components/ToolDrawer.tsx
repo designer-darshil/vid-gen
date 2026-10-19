@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
-import { X, Upload, Plus, Trash2, Wand2, Music, Image as ImageIcon, Sparkles, Check } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Upload, Plus, Trash2, Wand2, Music, Image as ImageIcon, Sparkles, Check, Send, RotateCcw, Bot, MessageSquare, Loader2 } from 'lucide-react';
 import { Project, LyricLine, TemplateConfig, AIProposal } from '../types';
 import { ToolTab } from './ToolRail';
+import { API } from '../services/api';
 
 interface ToolDrawerProps {
   activeTab: ToolTab | null;
   project: Project;
+  currentTime?: number;
   onClose: () => void;
   onUploadFile: (file: File, type: 'audio' | 'image' | 'lyrics') => Promise<void>;
   onDeleteAsset: (assetId: string) => Promise<void>;
@@ -16,11 +18,13 @@ interface ToolDrawerProps {
   onUpdateTemplate: (updates: Partial<TemplateConfig>) => void;
   onProposeAI: () => Promise<AIProposal | null>;
   onApplyAIProposal: (proposal: AIProposal) => Promise<void>;
+  onUpdateProject?: (newProject: Project) => void;
 }
 
 export const ToolDrawer: React.FC<ToolDrawerProps> = ({
   activeTab,
   project,
+  currentTime = 0,
   onClose,
   onUploadFile,
   onDeleteAsset,
@@ -30,13 +34,121 @@ export const ToolDrawer: React.FC<ToolDrawerProps> = ({
   onTranscribeVocals,
   onUpdateTemplate,
   onProposeAI,
-  onApplyAIProposal
+  onApplyAIProposal,
+  onUpdateProject
 }) => {
   const [lyricsInput, setLyricsInput] = useState('');
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiProposal, setAiProposal] = useState<AIProposal | null>(null);
+
+  // Conversational AI Copilot State
+  const [chatSubTab, setChatSubTab] = useState<'chat' | 'proposal'>('chat');
+  const [chatInput, setChatInput] = useState('');
+  const [isChatSending, setIsChatSending] = useState(false);
+  const chatMessagesEndRef = useRef<HTMLDivElement | null>(null);
+  const [chatMessages, setChatMessages] = useState<Array<{
+    id: string;
+    role: 'user' | 'assistant';
+    message: string;
+    summary?: string;
+    applied_changes?: Array<{ field: string; description: string }>;
+  }>>([
+    {
+      id: 'welcome',
+      role: 'assistant',
+      message: 'I am your AI Video Producer. Direct me with natural language commands (e.g., "Make the video more cinematic", "Highlight each word in sync", "Move lyrics lower and larger").',
+      summary: 'Ready to assist.'
+    }
+  ]);
+
+  // Load chat history when AI tab opens
+  useEffect(() => {
+    if (activeTab === 'ai' && project.id) {
+      API.getChatHistory(project.id)
+        .then((res) => {
+          if (res.success && res.history && res.history.length > 0) {
+            setChatMessages(res.history);
+          }
+        })
+        .catch((err) => console.warn('Could not load chat history:', err));
+    }
+  }, [activeTab, project.id]);
+
+  useEffect(() => {
+    if (activeTab === 'ai' && chatSubTab === 'chat') {
+      chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatMessages, activeTab, chatSubTab]);
+
+  const handleSendChatMessage = async (msgText?: string) => {
+    const textToSend = (msgText || chatInput).trim();
+    if (!textToSend || isChatSending) return;
+
+    setIsChatSending(true);
+    setChatInput('');
+
+    const tempUserMsg = {
+      id: 'msg_' + Date.now(),
+      role: 'user' as const,
+      message: textToSend
+    };
+    setChatMessages((prev) => [...prev, tempUserMsg]);
+
+    try {
+      const res = await API.chatWithAI(project.id, textToSend, currentTime || 0);
+      if (res.success) {
+        const assistantMsg = {
+          id: 'asst_' + Date.now(),
+          role: 'assistant' as const,
+          message: res.summary,
+          summary: res.summary,
+          applied_changes: res.applied_changes
+        };
+        setChatMessages((prev) => [...prev, assistantMsg]);
+        if (onUpdateProject && res.project) {
+          onUpdateProject(res.project);
+        }
+      }
+    } catch (err: any) {
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: 'err_' + Date.now(),
+          role: 'assistant' as const,
+          message: 'Error: ' + (err.message || 'Could not process editing command.')
+        }
+      ]);
+    } finally {
+      setIsChatSending(false);
+    }
+  };
+
+  const handleUndoChatEdit = async () => {
+    if (isChatSending) return;
+    setIsChatSending(true);
+    try {
+      const res = await API.undoChatEdit(project.id);
+      if (res.success) {
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: 'undo_' + Date.now(),
+            role: 'assistant' as const,
+            message: res.summary || 'Reverted previous change.'
+          }
+        ]);
+        if (onUpdateProject && res.project) {
+          onUpdateProject(res.project);
+        }
+      }
+    } catch (err: any) {
+      console.warn('Undo failed:', err);
+    } finally {
+      setIsChatSending(false);
+    }
+  };
 
   if (!activeTab) return null;
 
@@ -520,48 +632,299 @@ export const ToolDrawer: React.FC<ToolDrawerProps> = ({
           </>
         )}
 
-        {/* 7. AI STUDIO TAB */}
+        {/* 7. AI STUDIO / COPILOT TAB */}
         {activeTab === 'ai' && (
-          <>
-            <div>
-              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                AI analyzes your audio tempo, lyric sentiment, and artwork palette to synthesize a bespoke cinematic composition.
-              </p>
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '10px' }}>
+            {/* Sub-tab Switcher: Chat Copilot vs Full Proposal */}
+            <div style={{ display: 'flex', background: 'var(--surface-primary)', padding: '3px', borderRadius: 'var(--radius-sm)', gap: '4px' }}>
               <button
-                className="btn btn-primary"
-                style={{ width: '100%', marginTop: '12px' }}
-                disabled={aiLoading}
-                onClick={async () => {
-                  setAiLoading(true);
-                  const prop = await onProposeAI();
-                  setAiProposal(prop);
-                  setAiLoading(false);
+                onClick={() => setChatSubTab('chat')}
+                style={{
+                  flex: 1,
+                  height: '28px',
+                  background: chatSubTab === 'chat' ? 'rgba(182, 255, 59, 0.12)' : 'transparent',
+                  border: '1px solid',
+                  borderColor: chatSubTab === 'chat' ? 'rgba(182, 255, 59, 0.4)' : 'transparent',
+                  borderRadius: '4px',
+                  color: chatSubTab === 'chat' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
                 }}
               >
-                <Sparkles size={16} />
-                <span>{aiLoading ? 'Synthesizing Proposal...' : 'Generate Direction'}</span>
+                <Bot size={13} />
+                <span>AI Copilot</span>
+              </button>
+              <button
+                onClick={() => setChatSubTab('proposal')}
+                style={{
+                  flex: 1,
+                  height: '28px',
+                  background: chatSubTab === 'proposal' ? 'rgba(182, 255, 59, 0.12)' : 'transparent',
+                  border: '1px solid',
+                  borderColor: chatSubTab === 'proposal' ? 'rgba(182, 255, 59, 0.4)' : 'transparent',
+                  borderRadius: '4px',
+                  color: chatSubTab === 'proposal' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+              >
+                <Sparkles size={13} />
+                <span>Auto Direction</span>
               </button>
             </div>
 
-            {aiProposal && (
-              <div style={{ padding: '14px', background: 'var(--surface-primary)', border: '1px solid var(--accent-border)', borderRadius: 'var(--radius-md)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent-primary)' }}>
-                  Proposed: {aiProposal.preset}
-                </span>
-                <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                  {aiProposal.rationale}
+            {/* TAB A: CONVERSATIONAL COPILOT */}
+            {chatSubTab === 'chat' && (
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: '8px' }}>
+                {/* Quick Inspiration Prompt Chips */}
+                <div>
+                  <div style={{ fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em', marginBottom: '6px' }}>
+                    Quick Directives
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                    {[
+                      { label: '✨ Make Cinematic', cmd: 'Make the video more cinematic and atmospheric.' },
+                      { label: '🎤 Word Highlight', cmd: 'Highlight each word in sync with the vocals.' },
+                      { label: '⚡ Boost Energy', cmd: 'Make the chorus more energetic.' },
+                      { label: '🎥 Slow Motion', cmd: 'Use slower camera motion during the verse.' },
+                      { label: '📏 Lower & Enlarge', cmd: 'Move the lyrics lower and make them larger.' },
+                      { label: '🎨 Solar Accent', cmd: 'Change highlight accent color to Solar Lime #B6FF3B.' }
+                    ].map((item, idx) => (
+                      <button
+                        key={idx}
+                        disabled={isChatSending}
+                        onClick={() => handleSendChatMessage(item.cmd)}
+                        style={{
+                          background: 'var(--surface-primary)',
+                          border: '1px solid var(--border-subtle)',
+                          borderRadius: '12px',
+                          padding: '3px 8px',
+                          fontSize: '10px',
+                          color: 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                          whiteSpace: 'nowrap'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = 'var(--accent-primary)';
+                          e.currentTarget.style.color = 'var(--accent-primary)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = 'var(--border-subtle)';
+                          e.currentTarget.style.color = 'var(--text-secondary)';
+                        }}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Chat Log Stream */}
+                <div
+                  style={{
+                    flex: 1,
+                    minHeight: '160px',
+                    maxHeight: '260px',
+                    overflowY: 'auto',
+                    background: 'var(--surface-primary)',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-subtle)',
+                    padding: '10px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px'
+                  }}
+                >
+                  {chatMessages.map((msg, i) => {
+                    const isUser = msg.role === 'user';
+                    return (
+                      <div
+                        key={msg.id || i}
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: isUser ? 'flex-end' : 'flex-start',
+                          gap: '3px'
+                        }}
+                      >
+                        <div
+                          style={{
+                            maxWidth: '92%',
+                            padding: '8px 10px',
+                            borderRadius: isUser ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
+                            background: isUser ? 'rgba(182, 255, 59, 0.15)' : 'var(--surface-elevated)',
+                            border: `1px solid ${isUser ? 'rgba(182, 255, 59, 0.4)' : 'var(--border-subtle)'}`,
+                            color: isUser ? 'var(--text-primary)' : 'var(--text-primary)',
+                            fontSize: '12px',
+                            lineHeight: 1.45,
+                            boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
+                          }}
+                        >
+                          {!isUser && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '4px' }}>
+                              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--accent-primary)' }} />
+                              <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--accent-primary)' }}>
+                                AI Producer
+                              </span>
+                            </div>
+                          )}
+                          <div>{msg.message}</div>
+
+                          {/* Applied changes tags */}
+                          {msg.applied_changes && msg.applied_changes.length > 0 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
+                              {msg.applied_changes.map((ch, chIdx) => (
+                                <span
+                                  key={chIdx}
+                                  style={{
+                                    fontSize: '9px',
+                                    fontWeight: 600,
+                                    padding: '1px 5px',
+                                    borderRadius: '4px',
+                                    background: 'rgba(182, 255, 59, 0.12)',
+                                    color: 'var(--accent-primary)',
+                                    border: '1px solid rgba(182, 255, 59, 0.25)'
+                                  }}
+                                  title={ch.description}
+                                >
+                                  {ch.field}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {isChatSending && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '11px', padding: '4px' }}>
+                      <Loader2 size={13} style={{ animation: 'spin 1.5s linear infinite', color: 'var(--accent-primary)' }} />
+                      <span>AI Producer editing project...</span>
+                    </div>
+                  )}
+                  <div ref={chatMessagesEndRef} />
+                </div>
+
+                {/* Undo Action Bar */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <button
+                    disabled={isChatSending}
+                    onClick={handleUndoChatEdit}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--text-secondary)',
+                      fontSize: '11px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      cursor: 'pointer',
+                      padding: '2px 4px'
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--accent-primary)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                    title="Undo previous edit"
+                  >
+                    <RotateCcw size={12} />
+                    <span>Undo Last Edit</span>
+                  </button>
+                  <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                    @ {currentTime.toFixed(1)}s
+                  </span>
+                </div>
+
+                {/* Input Form */}
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-end' }}>
+                  <textarea
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendChatMessage();
+                      }
+                    }}
+                    placeholder="Direct changes (e.g. 'Move lyrics lower', 'Make it cinematic')..."
+                    rows={2}
+                    disabled={isChatSending}
+                    style={{
+                      flex: 1,
+                      background: 'var(--surface-primary)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: 'var(--radius-sm)',
+                      color: 'var(--text-primary)',
+                      padding: '8px',
+                      fontSize: '12px',
+                      resize: 'none',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                  <button
+                    className="btn btn-primary btn-icon"
+                    disabled={isChatSending || !chatInput.trim()}
+                    onClick={() => handleSendChatMessage()}
+                    style={{ width: '36px', height: '36px', flexShrink: 0 }}
+                    title="Send instruction (Enter)"
+                  >
+                    <Send size={15} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* TAB B: AUTO DIRECTION PROPOSAL */}
+            {chatSubTab === 'proposal' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  AI analyzes audio rhythm, lyric sentiment, and artwork palette to synthesize a full cohesive visual package.
                 </p>
                 <button
                   className="btn btn-primary"
-                  style={{ width: '100%', height: '34px', fontSize: '13px' }}
-                  onClick={() => onApplyAIProposal(aiProposal)}
+                  style={{ width: '100%' }}
+                  disabled={aiLoading}
+                  onClick={async () => {
+                    setAiLoading(true);
+                    const prop = await onProposeAI();
+                    setAiProposal(prop);
+                    setAiLoading(false);
+                  }}
                 >
-                  <Check size={14} />
-                  <span>Apply Proposal</span>
+                  <Sparkles size={15} />
+                  <span>{aiLoading ? 'Synthesizing...' : 'Generate AI Proposal'}</span>
                 </button>
+
+                {aiProposal && (
+                  <div style={{ padding: '12px', background: 'var(--surface-primary)', border: '1px solid rgba(182, 255, 59, 0.35)', borderRadius: 'var(--radius-md)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent-primary)' }}>
+                      Proposed: {aiProposal.preset}
+                    </span>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                      {aiProposal.rationale}
+                    </p>
+                    <button
+                      className="btn btn-primary btn-sm"
+                      style={{ width: '100%', height: '32px' }}
+                      onClick={() => onApplyAIProposal(aiProposal)}
+                    >
+                      <Check size={14} />
+                      <span>Apply Direction</span>
+                    </button>
+                  </div>
+                )}
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
     </aside>

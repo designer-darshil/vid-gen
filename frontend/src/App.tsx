@@ -444,6 +444,7 @@ export const App: React.FC = () => {
         <ToolDrawer
           activeTab={activeTool}
           project={project}
+          currentTime={currentTime}
           onClose={() => setActiveTool(null)}
           onUploadFile={handleUploadFile}
           onDeleteAsset={handleDeleteAsset}
@@ -454,6 +455,7 @@ export const App: React.FC = () => {
           onUpdateTemplate={handleUpdateTemplate}
           onProposeAI={handleProposeAI}
           onApplyAIProposal={handleApplyAIProposal}
+          onUpdateProject={(p) => commitProjectState(p)}
         />
 
         {/* Central Cinematic Canvas Stage */}
@@ -477,6 +479,7 @@ export const App: React.FC = () => {
           onUpdateLyrics={handleUpdateLyrics}
           onUpdateTimelineData={handleUpdateTimelineData}
           onSeek={handleSeek}
+          onUpdateProject={(p) => commitProjectState(p)}
         />
       </div>
 
