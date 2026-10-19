@@ -32,3 +32,9 @@ data/thumbnails/
 # OS specific files
 .DS_Store
 Thumbs.db
+
+# Node dependencies and build artifacts
+node_modules/
+*/node_modules/
+frontend/dist/
+poc/dist/

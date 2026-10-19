@@ -71,6 +71,7 @@ class StorageService:
         if not StorageService.is_safe_path(target_path, target_dir):
             raise PermissionError("Path traversal detected.")
 
+        target_dir.mkdir(parents=True, exist_ok=True)
         file_storage.save(str(target_path))
         file_size = target_path.stat().st_size
 
