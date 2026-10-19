@@ -250,4 +250,56 @@ def test_ai_create_draft_api_endpoint(client, test_app, tmp_path):
     assert resp_json["success"] is True
     assert "project" in resp_json
     assert "scene_plan" in resp_json
+    assert "transcription_status" in resp_json
     assert f"/editor/{resp_json['project']['id']}" in resp_json["redirect_url"]
+
+
+def test_user_provided_lyrics_flow(client, test_app, tmp_path):
+    with test_app.app_context():
+        from app.models.database import get_db
+        db = get_db()
+        db.execute("INSERT OR IGNORE INTO users (id, username, password_hash) VALUES (1, 'admin', 'dummy_hash')")
+        db.commit()
+
+    with client.session_transaction() as sess:
+        sess["user_id"] = 1
+        sess["username"] = "admin"
+
+    import io
+    audio_data = io.BytesIO(b"\xFF\xFB\x90\x00" * 400)
+    real_lyrics = "Remember when we first met?\nYou said light my cigarette\nStrawberries and cigarettes always taste like you"
+    data = {
+        "title": "Strawberries Track",
+        "aspect_ratio": "16:9",
+        "audio_file": (audio_data, "strawberries.mp3"),
+        "lyrics_text": real_lyrics
+    }
+
+    res = client.post("/api/ai/create-draft", data=data, content_type="multipart/form-data")
+    assert res.status_code == 201
+    resp_json = res.get_json()
+    assert resp_json["success"] is True
+    lyrics_data = resp_json["project"]["lyrics_data"]
+    # Verify real user lyrics were used, not invented placeholders
+    assert len(lyrics_data) == 3
+    assert "Remember when we first met?" in lyrics_data[0]["text"]
+    assert "Strawberries and cigarettes" in lyrics_data[2]["text"]
+    assert "Vocal Phrase" not in lyrics_data[0]["text"]
+
+
+def test_transcription_limitation_honest_reporting(tmp_path):
+    import wave
+    test_wav = tmp_path / "tone.wav"
+    with wave.open(str(test_wav), "w") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(8000)
+        w.writeframes(b"\x00\x00" * 8000 * 2)
+
+    lines = AIDirector.transcribe_audio_lyrics(str(test_wav), duration=2.0)
+    assert len(lines) > 0
+    # Must NEVER claim invented lines are transcribed
+    for l in lines:
+        assert "Vocal Phrase" not in l["text"]
+        assert l["transcribed"] is False
+        assert l["needs_review"] is True

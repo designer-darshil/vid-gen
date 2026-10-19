@@ -40,9 +40,17 @@ def get_db():
         g.db.execute("PRAGMA foreign_keys=ON;")
     return g.db
 
-def get_standalone_db():
+def get_standalone_db(db_path: str = None):
     """For background threads or standalone tasks where flask g context does not exist."""
-    db_path = Config.DATABASE_PATH
+    if not db_path:
+        try:
+            from flask import current_app, has_app_context
+            if has_app_context():
+                db_path = current_app.config.get("DATABASE_PATH", Config.DATABASE_PATH)
+            else:
+                db_path = Config.DATABASE_PATH
+        except Exception:
+            db_path = Config.DATABASE_PATH
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     db = sqlite3.connect(
         db_path,

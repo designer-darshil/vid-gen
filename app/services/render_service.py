@@ -44,7 +44,15 @@ class RenderService:
     def queue_render(cls, project_data: dict, user_id: int, resolution: str = "1080p", fps: int = 30) -> str:
         cls.start_worker()
         job_id = str(uuid.uuid4())
-        db = get_standalone_db()
+        db_path = None
+        try:
+            from flask import current_app, has_app_context
+            if has_app_context():
+                db_path = current_app.config.get("DATABASE_PATH")
+        except Exception:
+            pass
+
+        db = get_standalone_db(db_path=db_path)
         try:
             db.execute("""
                 INSERT INTO render_jobs (id, project_id, user_id, status, progress, output_resolution, fps)
@@ -59,7 +67,8 @@ class RenderService:
             "project_data": project_data,
             "user_id": user_id,
             "resolution": resolution,
-            "fps": fps
+            "fps": fps,
+            "db_path": db_path
         })
         return job_id
 
@@ -93,8 +102,8 @@ class RenderService:
                 logger.exception("Unexpected error in render worker loop: %s", e)
 
     @classmethod
-    def _update_job_status(cls, job_id: str, status: str, progress: int = 0, output_file: str = None, error_msg: str = None):
-        db = get_standalone_db()
+    def _update_job_status(cls, job_id: str, status: str, progress: int = 0, output_file: str = None, error_msg: str = None, db_path: str = None):
+        db = get_standalone_db(db_path=db_path)
         try:
             now = datetime.now(timezone.utc)
             completed_at = now if status in ("completed", "failed", "cancelled") else None
@@ -406,8 +415,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         project = task["project_data"]
         resolution_str = task["resolution"]
         fps = task["fps"]
+        db_path = task.get("db_path")
 
-        cls._update_job_status(job_id, "rendering", 5)
+        cls._update_job_status(job_id, "rendering", 5, db_path=db_path)
 
         temp_dir = RENDERS_DIR / f"job_{job_id}"
         temp_dir.mkdir(parents=True, exist_ok=True)
@@ -449,7 +459,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
             # Query asset file paths for image clips
             asset_paths = {}
-            db = get_standalone_db()
+            db = get_standalone_db(db_path=db_path)
             try:
                 rows = db.execute("SELECT id, file_path FROM assets WHERE user_id = ?", (task["user_id"],)).fetchall()
                 for r in rows:
@@ -575,7 +585,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                     pct = min(98, max(5, int((curr_sec / total_duration) * 95)))
                     if pct > progress_val:
                         progress_val = pct
-                        cls._update_job_status(job_id, "rendering", progress_val)
+                        cls._update_job_status(job_id, "rendering", progress_val, db_path=db_path)
 
             proc.wait()
 
@@ -591,11 +601,11 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             if not val_res.get("valid", True):
                 raise RuntimeError(f"Output validation failed: {val_res.get('error', 'Invalid video output')}")
 
-            cls._update_job_status(job_id, "completed", 100, output_file=out_filename)
+            cls._update_job_status(job_id, "completed", 100, output_file=out_filename, db_path=db_path)
             logger.info("Render job %s completed successfully: %s (Validation: %s)", job_id, final_output_path, val_res)
 
         except Exception as e:
             logger.exception("Render job %s failed: %s", job_id, e)
-            cls._update_job_status(job_id, "failed", error_msg=str(e))
+            cls._update_job_status(job_id, "failed", error_msg=str(e), db_path=db_path)
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)

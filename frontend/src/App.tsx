@@ -34,6 +34,7 @@ export const App: React.FC = () => {
   // Workspace layout & selection state
   const [activeTool, setActiveTool] = useState<ToolTab | null>('media');
   const [isInspectorOpen, setIsInspectorOpen] = useState<boolean>(true);
+  const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
 
   // Playback & timeline state
   const [currentTime, setCurrentTime] = useState<number>(0);
@@ -471,6 +472,11 @@ export const App: React.FC = () => {
           onUpdateTemplate={handleUpdateTemplate}
           isOpen={isInspectorOpen}
           onToggle={setIsInspectorOpen}
+          selectedClipId={selectedClipId}
+          onSelectClip={setSelectedClipId}
+          onUpdateLyrics={handleUpdateLyrics}
+          onUpdateTimelineData={handleUpdateTimelineData}
+          onSeek={handleSeek}
         />
       </div>
 
@@ -478,6 +484,8 @@ export const App: React.FC = () => {
       <Timeline
         project={project}
         currentTime={currentTime}
+        selectedClipId={selectedClipId}
+        onSelectClip={setSelectedClipId}
         onSeek={handleSeek}
         onUpdateLyrics={handleUpdateLyrics}
         onUpdateTimelineData={handleUpdateTimelineData}

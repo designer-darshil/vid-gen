@@ -124,26 +124,34 @@ class AIDirector:
     # STAGE 2: Lyric Transcription and Timestamps
     # =========================================================================
     @classmethod
-    def transcribe_audio_lyrics(cls, audio_path: str, duration: float) -> List[Dict[str, Any]]:
+    def transcribe_audio_lyrics(
+        cls,
+        audio_path: str,
+        duration: float,
+        user_lyrics: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """
         Transcribes vocal lines and timestamps directly from audio using Whisper,
-        Gemini multimodal audio processing, or acoustic energy segmentation fallback.
+        user-provided lyric text, or acoustic energy segmentation fallback.
         """
-        lyrics = SyncService.transcribe_vocals(audio_path, duration)
+        lyrics = SyncService.transcribe_vocals(audio_path, duration, user_lyrics=user_lyrics)
         if not lyrics:
-            # Fallback to rhythmic verse structure if empty
+            # Fallback to rhythmic cue structure if empty
             interval = 4.0
             num_segs = max(1, int(duration // interval))
             lyrics = [
                 {
                     "start": round(i * interval, 2),
                     "end": round(min(duration, (i + 1) * interval - 0.4), 2),
-                    "text": f"Verse Line {i + 1}",
+                    "text": f"[Section {i + 1} • Add Lyrics]",
                     "words": [
-                        {"word": "Verse", "start": round(i * interval, 2), "end": round(i * interval + 1.2, 2)},
-                        {"word": f"Line {i + 1}", "start": round(i * interval + 1.2, 2), "end": round(min(duration, (i + 1) * interval - 0.4), 2)}
+                        {"word": f"[Section {i + 1}]", "start": round(i * interval, 2), "end": round(i * interval + 1.2, 2)},
+                        {"word": "[Add Lyrics]", "start": round(i * interval + 1.2, 2), "end": round(min(duration, (i + 1) * interval - 0.4), 2)}
                     ],
-                    "confidence": 0.75
+                    "confidence": 0.50,
+                    "transcribed": False,
+                    "is_placeholder": True,
+                    "needs_review": True
                 }
                 for i in range(num_segs)
             ]
@@ -216,6 +224,11 @@ class AIDirector:
                     })
 
             confidence = round(float(line.get("confidence", 0.90)), 2)
+            is_placeholder = bool(line.get("is_placeholder", False))
+            transcribed = bool(line.get("transcribed", False))
+            engine = line.get("engine", "user_aligned")
+            needs_review = bool(line.get("needs_review", False or confidence < 0.65))
+
             cleaned.append({
                 "id": line.get("id") or f"line_{idx + 1}",
                 "start": start,
@@ -223,7 +236,10 @@ class AIDirector:
                 "text": raw_text,
                 "words": words,
                 "confidence": confidence,
-                "needs_review": confidence < 0.65
+                "needs_review": needs_review,
+                "is_placeholder": is_placeholder,
+                "transcribed": transcribed,
+                "engine": engine
             })
             last_end = end
 
@@ -601,7 +617,8 @@ class AIDirector:
         audio_asset_id: str,
         artwork_asset_id: Optional[str] = None,
         aspect_ratio: str = "16:9",
-        quality: str = "1080p"
+        quality: str = "1080p",
+        user_lyrics_text: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Orchestrates Stages 1-5 to automatically generate a complete, editable video draft:
@@ -625,10 +642,27 @@ class AIDirector:
         duration = metadata["duration"] or float(row["duration"] or 30.0)
 
         # Stage 2: Lyric transcription
-        raw_lyrics = cls.transcribe_audio_lyrics(audio_path, duration)
+        raw_lyrics = cls.transcribe_audio_lyrics(audio_path, duration, user_lyrics=user_lyrics_text)
 
         # Stage 3: Normalization & confidence scoring
         cleaned_lyrics = cls.correct_and_score_lyrics(raw_lyrics, duration)
+
+        # Status of transcription
+        has_real_transcription = any(l.get("transcribed") is True for l in cleaned_lyrics)
+        has_user_lyrics = bool(user_lyrics_text and user_lyrics_text.strip())
+        transcription_status = {
+            "has_transcription": has_real_transcription or has_user_lyrics,
+            "speech_to_text": has_real_transcription,
+            "engine": "whisper" if has_real_transcription else ("user_provided" if has_user_lyrics else "acoustic_energy_envelope"),
+            "notice": None if (has_real_transcription or has_user_lyrics) else (
+                "Speech-to-text transcription engine (Whisper) is not installed in this environment. "
+                "Acoustic timing cue points were detected from audio energy, but lyrics require manual entry or LRC/SRT import."
+            ),
+            "limitation": (
+                "Speech-to-text transcription engine (Whisper) is not installed in this environment. "
+                "Acoustic timing cue points were detected from audio energy, but lyrics require manual entry or LRC/SRT import."
+            ) if not has_real_transcription else None
+        }
 
         # Stage 4: Mood and visual direction
         artwork_info = None
@@ -773,7 +807,8 @@ class AIDirector:
             "project": created,
             "scene_plan": scene_plan,
             "metadata": metadata,
-            "mood": mood_direction
+            "mood": mood_direction,
+            "transcription_status": transcription_status
         }
 
     # =========================================================================

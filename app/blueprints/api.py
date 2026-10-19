@@ -55,7 +55,8 @@ def update_project(project_id: str):
     success = ProjectService.update_project(project_id, user_id, data)
     if not success:
         return jsonify({"error": "Failed to update project"}), 400
-    return jsonify({"success": True, "message": "Project saved successfully"})
+    updated = ProjectService.get_project(project_id, user_id)
+    return jsonify({"success": True, "message": "Project saved successfully", "project": updated})
 
 @api_bp.route("/projects/<project_id>/duplicate", methods=["POST"])
 @login_required
@@ -359,6 +360,15 @@ def ai_create_draft():
                 if not song_title:
                     song_title = Path(res["original_name"]).stem
 
+        user_lyrics_text = request.form.get("lyrics_text", "").strip() or None
+        if "lyrics_file" in request.files:
+            l_file = request.files["lyrics_file"]
+            if l_file and l_file.filename:
+                try:
+                    user_lyrics_text = l_file.read().decode("utf-8", errors="replace").strip()
+                except Exception:
+                    pass
+
         if "artwork_file" in request.files:
             art_file = request.files["artwork_file"]
             if art_file and art_file.filename:
@@ -371,6 +381,7 @@ def ai_create_draft():
         quality = data.get("quality", "1080p")
         audio_asset_id = data.get("audio_asset_id")
         artwork_asset_id = data.get("artwork_asset_id")
+        user_lyrics_text = data.get("lyrics_text", "").strip() or None
 
     if not audio_asset_id:
         return jsonify({"error": "Audio track is required to create an animated lyric video."}), 400
@@ -382,12 +393,14 @@ def ai_create_draft():
             audio_asset_id=audio_asset_id,
             artwork_asset_id=artwork_asset_id,
             aspect_ratio=aspect_ratio,
-            quality=quality
+            quality=quality,
+            user_lyrics_text=user_lyrics_text
         )
         return jsonify({
             "success": True,
             "project": draft["project"],
             "scene_plan": draft["scene_plan"],
+            "transcription_status": draft.get("transcription_status"),
             "redirect_url": f"/editor/{draft['project']['id']}"
         }), 201
     except Exception as e:

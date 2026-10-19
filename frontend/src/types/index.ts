@@ -11,6 +11,10 @@ export interface LyricLine {
   end: number;
   text: string;
   words?: LyricWord[];
+  transcribed?: boolean;
+  is_placeholder?: boolean;
+  needs_review?: boolean;
+  engine?: string;
 }
 
 export interface TimelineClip {

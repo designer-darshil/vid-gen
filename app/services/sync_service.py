@@ -315,14 +315,21 @@ class SyncService:
         return adjusted
 
     @staticmethod
-    def transcribe_vocals(audio_path: str, duration: float) -> list[dict]:
+    def transcribe_vocals(audio_path: str, duration: float, user_lyrics: str = None) -> list[dict]:
         """
         Transcribes vocal lines and timestamps directly from the audio file.
         Uses OpenAI Whisper if installed; otherwise utilizes energy onset segmentation
         and rhythm chunking to detect vocal regions and generate timed line segments.
+        If user_lyrics are provided, aligns them directly with audio energy regions.
         """
         if not audio_path or not Path(audio_path).exists():
             return []
+
+        # If user explicitly provided lyrics text, align them with acoustic energy
+        if user_lyrics and user_lyrics.strip():
+            aligned = SyncService.align_text_to_audio(user_lyrics.strip(), audio_path, duration)
+            if aligned:
+                return aligned
 
         # 1. Try Whisper if installed
         try:
@@ -345,14 +352,17 @@ class SyncService:
                     "start": round(seg.get("start", 0.0), 3),
                     "end": round(seg.get("end", 0.0), 3),
                     "text": text,
-                    "words": words
+                    "words": words,
+                    "transcribed": True,
+                    "engine": "whisper",
+                    "needs_review": False
                 })
             if segments:
                 return segments
         except (ImportError, Exception) as e:
             logger.info("Whisper not available or encountered error: %s. Falling back to audio envelope segmentation.", e)
 
-        # 2. Audio energy envelope segmentation for vocal phrases
+        # 2. Audio energy envelope segmentation for acoustic cue points
         try:
             cmd = [
                 Config.FFMPEG_BINARY,
@@ -377,12 +387,15 @@ class SyncService:
                 {
                     "start": round(i * interval, 2),
                     "end": round(min(duration, (i + 1) * interval - 0.5), 2),
-                    "text": f"Vocal Phrase {i + 1}",
+                    "text": f"[Section {i + 1} • Add Lyrics]",
                     "words": [
-                        {"word": "Vocal", "start": round(i * interval, 2), "end": round(i * interval + 1.5, 2)},
-                        {"word": f"Phrase {i + 1}", "start": round(i * interval + 1.5, 2), "end": round(min(duration, (i + 1) * interval - 0.5), 2)}
+                        {"word": f"[Section {i + 1}]", "start": round(i * interval, 2), "end": round(i * interval + 1.5, 2)},
+                        {"word": "[Add Lyrics]", "start": round(i * interval + 1.5, 2), "end": round(min(duration, (i + 1) * interval - 0.5), 2)}
                     ],
-                    "transcribed": True
+                    "transcribed": False,
+                    "is_placeholder": True,
+                    "needs_review": True,
+                    "engine": "rhythmic_interval"
                 }
                 for i in range(num_segs)
             ]
@@ -440,8 +453,8 @@ class SyncService:
         lines = []
         for idx, (s_start, s_end) in enumerate(merged):
             dur = s_end - s_start
-            dummy_text = f"Vocal Phrase {idx + 1}"
-            word_list = dummy_text.split()
+            cue_text = f"[Section {idx + 1} • Add Lyrics]"
+            word_list = [f"[Section {idx + 1}]", "[Add Lyrics]"]
             w_dur = dur / len(word_list)
             words = []
             for w_i, w in enumerate(word_list):
@@ -453,9 +466,12 @@ class SyncService:
             lines.append({
                 "start": round(s_start, 2),
                 "end": round(s_end, 2),
-                "text": dummy_text,
+                "text": cue_text,
                 "words": words,
-                "transcribed": True
+                "transcribed": False,
+                "is_placeholder": True,
+                "needs_review": True,
+                "engine": "acoustic_energy_envelope"
             })
 
         return lines

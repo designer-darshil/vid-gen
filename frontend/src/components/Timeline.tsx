@@ -6,6 +6,8 @@ import { API } from '../services/api';
 interface TimelineProps {
   project: Project;
   currentTime: number;
+  selectedClipId?: string | null;
+  onSelectClip?: (id: string | null) => void;
   onSeek: (time: number) => void;
   onUpdateLyrics: (lines: LyricLine[]) => void;
   onUpdateTimelineData: (tracks: Project['timeline_data']['tracks']) => void;
@@ -14,6 +16,8 @@ interface TimelineProps {
 export const Timeline: React.FC<TimelineProps> = ({
   project,
   currentTime,
+  selectedClipId,
+  onSelectClip,
   onSeek,
   onUpdateLyrics,
   onUpdateTimelineData
@@ -25,7 +29,19 @@ export const Timeline: React.FC<TimelineProps> = ({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [timelineHeight, setTimelineHeight] = useState(240);
   const [zoom, setZoom] = useState(80); // pixels per second
-  const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
+  const [localSelectedClipId, setLocalSelectedClipId] = useState<string | null>(null);
+  const activeSelectedClipId = selectedClipId !== undefined ? selectedClipId : localSelectedClipId;
+  const setSelectedClip = onSelectClip || setLocalSelectedClipId;
+
+  const [dragState, setDragState] = useState<{
+    type: 'move' | 'trim-left' | 'trim-right';
+    clipType: 'lyric' | 'image';
+    clipIndex: number;
+    startX: number;
+    origStart: number;
+    origEnd: number;
+  } | null>(null);
+
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [waveformPeaks, setWaveformPeaks] = useState<number[]>([]);
   const [isScrubbing, setIsScrubbing] = useState(false);
@@ -166,12 +182,70 @@ export const Timeline: React.FC<TimelineProps> = ({
     onSeek(newTime);
   }, [totalDuration, zoom, onSeek]);
 
+  // Drag handling effect for trimming and moving clips
+  useEffect(() => {
+    if (!dragState) return;
+
+    const onMouseMove = (e: MouseEvent) => {
+      const deltaSec = (e.clientX - dragState.startX) / zoom;
+      if (dragState.clipType === 'lyric') {
+        const copy = [...(project.lyrics_data || [])];
+        const line = copy[dragState.clipIndex];
+        if (!line) return;
+
+        if (dragState.type === 'move') {
+          const dur = dragState.origEnd - dragState.origStart;
+          const newStart = Math.max(0, Math.min(totalDuration - dur, dragState.origStart + deltaSec));
+          const newEnd = newStart + dur;
+          copy[dragState.clipIndex] = { ...line, start: Math.round(newStart * 100) / 100, end: Math.round(newEnd * 100) / 100 };
+        } else if (dragState.type === 'trim-left') {
+          const newStart = Math.max(0, Math.min(dragState.origEnd - 0.2, dragState.origStart + deltaSec));
+          copy[dragState.clipIndex] = { ...line, start: Math.round(newStart * 100) / 100 };
+        } else if (dragState.type === 'trim-right') {
+          const newEnd = Math.max(dragState.origStart + 0.2, Math.min(totalDuration, dragState.origEnd + deltaSec));
+          copy[dragState.clipIndex] = { ...line, end: Math.round(newEnd * 100) / 100 };
+        }
+        onUpdateLyrics(copy);
+      } else if (dragState.clipType === 'image') {
+        const tracks = [...(project.timeline_data?.tracks || [])];
+        const imgTrack = tracks.find((t) => t.type === 'image');
+        if (!imgTrack || !imgTrack.clips[dragState.clipIndex]) return;
+        const clip = imgTrack.clips[dragState.clipIndex];
+
+        if (dragState.type === 'move') {
+          const dur = dragState.origEnd - dragState.origStart;
+          const newStart = Math.max(0, Math.min(totalDuration - dur, dragState.origStart + deltaSec));
+          const newEnd = newStart + dur;
+          imgTrack.clips[dragState.clipIndex] = { ...clip, start: Math.round(newStart * 100) / 100, end: Math.round(newEnd * 100) / 100 };
+        } else if (dragState.type === 'trim-left') {
+          const newStart = Math.max(0, Math.min(dragState.origEnd - 0.5, dragState.origStart + deltaSec));
+          imgTrack.clips[dragState.clipIndex] = { ...clip, start: Math.round(newStart * 100) / 100 };
+        } else if (dragState.type === 'trim-right') {
+          const newEnd = Math.max(dragState.origStart + 0.5, Math.min(totalDuration, dragState.origEnd + deltaSec));
+          imgTrack.clips[dragState.clipIndex] = { ...clip, end: Math.round(newEnd * 100) / 100 };
+        }
+        onUpdateTimelineData(tracks);
+      }
+    };
+
+    const onMouseUp = () => {
+      setDragState(null);
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [dragState, zoom, totalDuration, project.lyrics_data, project.timeline_data, onUpdateLyrics, onUpdateTimelineData]);
+
   // Split selected clip
   const handleSplitClip = () => {
-    if (!selectedClipId) return;
+    if (!activeSelectedClipId) return;
     const tracks = [...(project.timeline_data?.tracks || [])];
     tracks.forEach((track) => {
-      const idx = track.clips.findIndex((c) => c.id === selectedClipId);
+      const idx = track.clips.findIndex((c) => c.id === activeSelectedClipId);
       if (idx !== -1) {
         const clip = track.clips[idx];
         if (currentTime > clip.start && currentTime < clip.end) {
@@ -190,13 +264,21 @@ export const Timeline: React.FC<TimelineProps> = ({
 
   // Delete selected clip
   const handleDeleteClip = () => {
-    if (!selectedClipId) return;
+    if (!activeSelectedClipId) return;
+    if (activeSelectedClipId.startsWith('lyric_')) {
+      const lIdx = parseInt(activeSelectedClipId.replace('lyric_', ''));
+      const copy = [...(project.lyrics_data || [])];
+      copy.splice(lIdx, 1);
+      onUpdateLyrics(copy);
+      setSelectedClip(null);
+      return;
+    }
     const tracks = [...(project.timeline_data?.tracks || [])];
     tracks.forEach((track) => {
-      track.clips = track.clips.filter((c) => c.id !== selectedClipId);
+      track.clips = track.clips.filter((c) => c.id !== activeSelectedClipId);
     });
     onUpdateTimelineData(tracks);
-    setSelectedClipId(null);
+    setSelectedClip(null);
   };
 
   const playheadX = currentTime * zoom;
@@ -264,7 +346,7 @@ export const Timeline: React.FC<TimelineProps> = ({
             style={{ width: '32px', height: '32px' }}
             title="Split Clip at Playhead (S)"
             onClick={handleSplitClip}
-            disabled={!selectedClipId}
+            disabled={!activeSelectedClipId}
           >
             <Scissors size={15} />
           </button>
@@ -273,10 +355,10 @@ export const Timeline: React.FC<TimelineProps> = ({
             style={{ width: '32px', height: '32px' }}
             title="Duplicate Clip"
             onClick={() => {
-              if (!selectedClipId) return;
+              if (!activeSelectedClipId) return;
               const tracks = [...(project.timeline_data?.tracks || [])];
               tracks.forEach((track) => {
-                const clip = track.clips.find((c) => c.id === selectedClipId);
+                const clip = track.clips.find((c) => c.id === activeSelectedClipId);
                 if (clip) {
                   const dur = clip.end - clip.start;
                   track.clips.push({
@@ -289,7 +371,7 @@ export const Timeline: React.FC<TimelineProps> = ({
               });
               onUpdateTimelineData(tracks);
             }}
-            disabled={!selectedClipId}
+            disabled={!activeSelectedClipId}
           >
             <Copy size={15} />
           </button>
@@ -298,7 +380,7 @@ export const Timeline: React.FC<TimelineProps> = ({
             style={{ width: '32px', height: '32px', color: 'var(--color-error)' }}
             title="Delete Selected Clip (Del)"
             onClick={handleDeleteClip}
-            disabled={!selectedClipId}
+            disabled={!activeSelectedClipId}
           >
             <Trash2 size={15} />
           </button>
@@ -438,16 +520,25 @@ export const Timeline: React.FC<TimelineProps> = ({
               <div style={{ height: '52px', borderBottom: '1px solid var(--border-subtle)', position: 'relative', padding: '6px 0' }}>
                 {(project.lyrics_data || []).map((line, idx) => {
                   const left = line.start * zoom;
-                  const width = Math.max(30, (line.end - line.start) * zoom);
-                  const isSelected = selectedClipId === `lyric_${idx}`;
+                  const width = Math.max(36, (line.end - line.start) * zoom);
+                  const isSelected = activeSelectedClipId === `lyric_${idx}`;
                   const isCurrent = currentTime >= line.start && currentTime <= line.end;
 
                   return (
                     <div
                       key={idx}
-                      onClick={(e) => {
+                      onMouseDown={(e) => {
                         e.stopPropagation();
-                        setSelectedClipId(`lyric_${idx}`);
+                        setSelectedClip(`lyric_${idx}`);
+                        onSeek(line.start);
+                        setDragState({
+                          type: 'move',
+                          clipType: 'lyric',
+                          clipIndex: idx,
+                          startX: e.clientX,
+                          origStart: line.start,
+                          origEnd: line.end
+                        });
                       }}
                       style={{
                         position: 'absolute',
@@ -462,17 +553,74 @@ export const Timeline: React.FC<TimelineProps> = ({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        cursor: 'pointer',
+                        cursor: 'grab',
                         overflow: 'hidden',
-                        boxShadow: isSelected ? '0 0 12px rgba(182, 255, 59, 0.4)' : 'none'
+                        boxShadow: isSelected ? '0 0 12px rgba(182, 255, 59, 0.45)' : 'none',
+                        userSelect: 'none'
                       }}
                     >
+                      {/* Left Trim Handle */}
+                      {isSelected && (
+                        <div
+                          onMouseDown={(e) => {
+                            e.stopPropagation();
+                            setDragState({
+                              type: 'trim-left',
+                              clipType: 'lyric',
+                              clipIndex: idx,
+                              startX: e.clientX,
+                              origStart: line.start,
+                              origEnd: line.end
+                            });
+                          }}
+                          style={{
+                            position: 'absolute',
+                            left: 0,
+                            top: 0,
+                            bottom: 0,
+                            width: '8px',
+                            background: 'var(--accent-primary)',
+                            cursor: 'ew-resize',
+                            zIndex: 10
+                          }}
+                          title="Drag to adjust start time"
+                        />
+                      )}
+
                       <span style={{ fontSize: '12px', fontWeight: 600, color: isCurrent ? 'var(--accent-primary)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {line.text}
                       </span>
                       <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', marginLeft: '6px' }}>
                         {(line.end - line.start).toFixed(1)}s
                       </span>
+
+                      {/* Right Trim Handle */}
+                      {isSelected && (
+                        <div
+                          onMouseDown={(e) => {
+                            e.stopPropagation();
+                            setDragState({
+                              type: 'trim-right',
+                              clipType: 'lyric',
+                              clipIndex: idx,
+                              startX: e.clientX,
+                              origStart: line.start,
+                              origEnd: line.end
+                            });
+                          }}
+                          style={{
+                            position: 'absolute',
+                            right: 0,
+                            top: 0,
+                            bottom: 0,
+                            width: '8px',
+                            background: 'var(--accent-primary)',
+                            cursor: 'ew-resize',
+                            zIndex: 10
+                          }}
+                          title="Drag to adjust end time"
+                        />
+                      )}
                     </div>
                   );
                 })}
@@ -480,40 +628,126 @@ export const Timeline: React.FC<TimelineProps> = ({
 
               {/* Lane 2: Image / Artwork Lane */}
               <div style={{ height: '52px', borderBottom: '1px solid var(--border-subtle)', position: 'relative', padding: '6px 0' }}>
-                {(project.timeline_data?.tracks?.find((t) => t.type === 'image')?.clips || []).map((clip) => {
-                  const left = clip.start * zoom;
-                  const width = Math.max(30, (clip.end - clip.start) * zoom);
-                  const isSelected = selectedClipId === clip.id;
+                {(() => {
+                  const imageAsset = project.assets?.find((a) => a.asset_type === 'image');
+                  let clips = project.timeline_data?.tracks?.find((t) => t.type === 'image')?.clips || [];
+                  if (clips.length === 0 && imageAsset) {
+                    clips = [{
+                      id: 'clip_default_art',
+                      asset_id: imageAsset.id,
+                      title: imageAsset.original_name,
+                      start: 0,
+                      end: totalDuration,
+                      opacity: 1.0
+                    }];
+                  }
 
-                  return (
-                    <div
-                      key={clip.id}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedClipId(clip.id);
-                      }}
-                      style={{
-                        position: 'absolute',
-                        left: `${left}px`,
-                        width: `${width}px`,
-                        height: '40px',
-                        background: 'rgba(56, 189, 248, 0.16)',
-                        border: '1px solid',
-                        borderColor: isSelected ? 'var(--accent-primary)' : 'rgba(56, 189, 248, 0.45)',
-                        borderRadius: 'var(--radius-sm)',
-                        padding: '0 8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        cursor: 'pointer',
-                        overflow: 'hidden'
-                      }}
-                    >
-                      <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-info)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {clip.title || 'Image Clip'}
-                      </span>
-                    </div>
-                  );
-                })}
+                  return clips.map((clip, cIdx) => {
+                    const left = clip.start * zoom;
+                    const width = Math.max(36, (clip.end - clip.start) * zoom);
+                    const isSelected = activeSelectedClipId === clip.id;
+
+                    return (
+                      <div
+                        key={clip.id}
+                        onMouseDown={(e) => {
+                          e.stopPropagation();
+                          setSelectedClip(clip.id);
+                          onSeek(clip.start);
+                          setDragState({
+                            type: 'move',
+                            clipType: 'image',
+                            clipIndex: cIdx,
+                            startX: e.clientX,
+                            origStart: clip.start,
+                            origEnd: clip.end
+                          });
+                        }}
+                        style={{
+                          position: 'absolute',
+                          left: `${left}px`,
+                          width: `${width}px`,
+                          height: '40px',
+                          background: 'rgba(56, 189, 248, 0.16)',
+                          border: '1px solid',
+                          borderColor: isSelected ? 'var(--accent-primary)' : 'rgba(56, 189, 248, 0.45)',
+                          borderRadius: 'var(--radius-sm)',
+                          padding: '0 8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          cursor: 'grab',
+                          overflow: 'hidden',
+                          userSelect: 'none',
+                          boxShadow: isSelected ? '0 0 12px rgba(182, 255, 59, 0.45)' : 'none'
+                        }}
+                      >
+                        {isSelected && (
+                          <div
+                            onMouseDown={(e) => {
+                              e.stopPropagation();
+                              setDragState({
+                                type: 'trim-left',
+                                clipType: 'image',
+                                clipIndex: cIdx,
+                                startX: e.clientX,
+                                origStart: clip.start,
+                                origEnd: clip.end
+                              });
+                            }}
+                            style={{
+                              position: 'absolute',
+                              left: 0,
+                              top: 0,
+                              bottom: 0,
+                              width: '8px',
+                              background: 'var(--accent-primary)',
+                              cursor: 'ew-resize',
+                              zIndex: 10
+                            }}
+                          />
+                        )}
+
+                        {clip.asset_id && (
+                          <img
+                            src={`/api/assets/${clip.asset_id}/file`}
+                            alt=""
+                            style={{ width: '26px', height: '26px', borderRadius: '3px', objectFit: 'cover' }}
+                          />
+                        )}
+                        <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-info)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {clip.title || 'Artwork Clip'}
+                        </span>
+
+                        {isSelected && (
+                          <div
+                            onMouseDown={(e) => {
+                              e.stopPropagation();
+                              setDragState({
+                                type: 'trim-right',
+                                clipType: 'image',
+                                clipIndex: cIdx,
+                                startX: e.clientX,
+                                origStart: clip.start,
+                                origEnd: clip.end
+                              });
+                            }}
+                            style={{
+                              position: 'absolute',
+                              right: 0,
+                              top: 0,
+                              bottom: 0,
+                              width: '8px',
+                              background: 'var(--accent-primary)',
+                              cursor: 'ew-resize',
+                              zIndex: 10
+                            }}
+                          />
+                        )}
+                      </div>
+                    );
+                  });
+                })()}
               </div>
 
               {/* Lane 3: Audio Waveform Lane */}

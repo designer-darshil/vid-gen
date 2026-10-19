@@ -7,16 +7,37 @@ interface RightInspectorProps {
   onUpdateTemplate: (updates: Partial<TemplateConfig>) => void;
   isOpen: boolean;
   onToggle: (open: boolean) => void;
+  selectedClipId?: string | null;
+  onSelectClip?: (id: string | null) => void;
+  onUpdateLyrics?: (lines: any[]) => void;
+  onUpdateTimelineData?: (tracks: any[]) => void;
+  onSeek?: (time: number) => void;
 }
 
 export const RightInspector: React.FC<RightInspectorProps> = ({
   project,
   onUpdateTemplate,
   isOpen,
-  onToggle
+  onToggle,
+  selectedClipId,
+  onSelectClip,
+  onUpdateLyrics,
+  onUpdateTimelineData,
+  onSeek
 }) => {
   const [tab, setTab] = useState<'layer' | 'motion' | 'backdrop' | 'project'>('layer');
   const cfg = project.template_data || {};
+
+  // Selected clip resolution
+  const isLyricSelected = selectedClipId?.startsWith('lyric_');
+  const selectedLyricIndex = isLyricSelected ? parseInt(selectedClipId!.replace('lyric_', ''), 10) : -1;
+  const selectedLyricCue = isLyricSelected && project.lyrics_data ? project.lyrics_data[selectedLyricIndex] : null;
+
+  // Selected artwork clip resolution
+  const imageTrack = project.timeline_data?.tracks?.find((t) => t.type === 'image');
+  const selectedImageClip = !isLyricSelected && selectedClipId && imageTrack
+    ? imageTrack.clips.find((c) => c.id === selectedClipId)
+    : null;
 
   if (!isOpen) {
     return (
@@ -101,6 +122,268 @@ export const RightInspector: React.FC<RightInspectorProps> = ({
 
       {/* Tab Panels */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+        {/* Selected Lyric Cue Inspector Card */}
+        {selectedLyricCue && (
+          <div
+            style={{
+              padding: '14px',
+              background: 'rgba(182, 255, 59, 0.05)',
+              border: '1px solid rgba(182, 255, 59, 0.35)',
+              borderRadius: 'var(--radius-md)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.25)'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    backgroundColor: 'var(--accent-primary)'
+                  }}
+                />
+                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent-primary)' }}>
+                  Lyric Cue #{selectedLyricIndex + 1}
+                </span>
+              </div>
+              <button
+                className="btn-icon"
+                style={{ width: '22px', height: '22px', fontSize: '12px' }}
+                onClick={() => onSelectClip && onSelectClip(null)}
+                title="Deselect clip"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Status indicator */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span
+                style={{
+                  fontSize: '10px',
+                  fontWeight: 600,
+                  padding: '2px 8px',
+                  borderRadius: '10px',
+                  backgroundColor: selectedLyricCue.is_placeholder
+                    ? 'rgba(234, 179, 8, 0.15)'
+                    : 'rgba(182, 255, 59, 0.15)',
+                  color: selectedLyricCue.is_placeholder
+                    ? '#facc15'
+                    : 'var(--accent-primary)',
+                  border: `1px solid ${selectedLyricCue.is_placeholder ? 'rgba(234, 179, 8, 0.3)' : 'rgba(182, 255, 59, 0.3)'}`
+                }}
+              >
+                {selectedLyricCue.is_placeholder
+                  ? 'Acoustic Timing (Needs Lyrics)'
+                  : selectedLyricCue.transcribed
+                  ? 'Speech-to-Text Transcribed'
+                  : 'User Provided Lyrics'}
+              </span>
+              <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
+                {(selectedLyricCue.end - selectedLyricCue.start).toFixed(2)}s
+              </span>
+            </div>
+
+            {/* Editable Lyric Textarea */}
+            <div>
+              <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '4px', display: 'block' }}>
+                Lyric Text
+              </label>
+              <textarea
+                value={selectedLyricCue.text}
+                onChange={(e) => {
+                  if (!onUpdateLyrics || !project.lyrics_data) return;
+                  const updated = [...project.lyrics_data];
+                  updated[selectedLyricIndex] = {
+                    ...updated[selectedLyricIndex],
+                    text: e.target.value,
+                    is_placeholder: false
+                  };
+                  onUpdateLyrics(updated);
+                }}
+                rows={2}
+                placeholder="Enter lyrics for this cue..."
+                style={{
+                  width: '100%',
+                  background: 'var(--surface-primary)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: 'var(--radius-sm)',
+                  color: 'var(--text-primary)',
+                  padding: '8px',
+                  fontSize: '13px',
+                  resize: 'vertical',
+                  fontFamily: 'inherit'
+                }}
+              />
+            </div>
+
+            {/* Timing Inputs */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <div>
+                <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: '2px' }}>
+                  Start Time (s)
+                </label>
+                <input
+                  type="number"
+                  step="0.05"
+                  min="0"
+                  max={selectedLyricCue.end - 0.1}
+                  value={Math.round(selectedLyricCue.start * 100) / 100}
+                  onChange={(e) => {
+                    if (!onUpdateLyrics || !project.lyrics_data) return;
+                    const val = parseFloat(e.target.value);
+                    if (isNaN(val) || val < 0 || val >= selectedLyricCue.end) return;
+                    const updated = [...project.lyrics_data];
+                    updated[selectedLyricIndex] = { ...updated[selectedLyricIndex], start: val };
+                    onUpdateLyrics(updated);
+                  }}
+                  className="form-control"
+                  style={{ width: '100%', padding: '4px 8px', fontSize: '12px', fontFamily: 'var(--font-mono)' }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: '2px' }}>
+                  End Time (s)
+                </label>
+                <input
+                  type="number"
+                  step="0.05"
+                  min={selectedLyricCue.start + 0.1}
+                  max={project.duration || 9999}
+                  value={Math.round(selectedLyricCue.end * 100) / 100}
+                  onChange={(e) => {
+                    if (!onUpdateLyrics || !project.lyrics_data) return;
+                    const val = parseFloat(e.target.value);
+                    if (isNaN(val) || val <= selectedLyricCue.start) return;
+                    const updated = [...project.lyrics_data];
+                    updated[selectedLyricIndex] = { ...updated[selectedLyricIndex], end: val };
+                    onUpdateLyrics(updated);
+                  }}
+                  className="form-control"
+                  style={{ width: '100%', padding: '4px 8px', fontSize: '12px', fontFamily: 'var(--font-mono)' }}
+                />
+              </div>
+            </div>
+
+            {/* Actions: Seek & Cue Navigation */}
+            <div style={{ display: 'flex', gap: '6px', marginTop: '2px' }}>
+              <button
+                className="btn btn-secondary btn-sm"
+                style={{ flex: 1, fontSize: '11px', height: '28px' }}
+                onClick={() => onSeek && onSeek(selectedLyricCue.start)}
+                title="Seek playhead to this cue start"
+              >
+                Seek to Cue
+              </button>
+              <button
+                className="btn btn-secondary btn-sm"
+                style={{ height: '28px', padding: '0 8px', fontSize: '11px' }}
+                disabled={selectedLyricIndex <= 0}
+                onClick={() => onSelectClip && onSelectClip(`lyric_${selectedLyricIndex - 1}`)}
+                title="Previous Cue"
+              >
+                ◀ Prev
+              </button>
+              <button
+                className="btn btn-secondary btn-sm"
+                style={{ height: '28px', padding: '0 8px', fontSize: '11px' }}
+                disabled={!project.lyrics_data || selectedLyricIndex >= project.lyrics_data.length - 1}
+                onClick={() => onSelectClip && onSelectClip(`lyric_${selectedLyricIndex + 1}`)}
+                title="Next Cue"
+              >
+                Next ▶
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Selected Artwork Clip Inspector Card */}
+        {selectedImageClip && (
+          <div
+            style={{
+              padding: '14px',
+              background: 'rgba(56, 189, 248, 0.05)',
+              border: '1px solid rgba(56, 189, 248, 0.35)',
+              borderRadius: 'var(--radius-md)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#38BDF8' }}>
+                Visual Backdrop Clip
+              </span>
+              <button
+                className="btn-icon"
+                style={{ width: '22px', height: '22px', fontSize: '12px' }}
+                onClick={() => onSelectClip && onSelectClip(null)}
+                title="Deselect clip"
+              >
+                ✕
+              </button>
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+              {selectedImageClip.title}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <div>
+                <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Start (s)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={Math.round(selectedImageClip.start * 10) / 10}
+                  onChange={(e) => {
+                    if (!onUpdateTimelineData || !project.timeline_data) return;
+                    const tracks = [...project.timeline_data.tracks];
+                    const tr = tracks.find((t) => t.type === 'image');
+                    const c = tr?.clips.find((cl) => cl.id === selectedImageClip.id);
+                    if (c) {
+                      c.start = parseFloat(e.target.value) || 0;
+                      onUpdateTimelineData(tracks);
+                    }
+                  }}
+                  className="form-control"
+                  style={{ width: '100%', fontSize: '12px', fontFamily: 'var(--font-mono)' }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>End (s)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={Math.round(selectedImageClip.end * 10) / 10}
+                  onChange={(e) => {
+                    if (!onUpdateTimelineData || !project.timeline_data) return;
+                    const tracks = [...project.timeline_data.tracks];
+                    const tr = tracks.find((t) => t.type === 'image');
+                    const c = tr?.clips.find((cl) => cl.id === selectedImageClip.id);
+                    if (c) {
+                      c.end = parseFloat(e.target.value) || 0;
+                      onUpdateTimelineData(tracks);
+                    }
+                  }}
+                  className="form-control"
+                  style={{ width: '100%', fontSize: '12px', fontFamily: 'var(--font-mono)' }}
+                />
+              </div>
+            </div>
+            <button
+              className="btn btn-secondary btn-sm"
+              style={{ fontSize: '11px', height: '28px' }}
+              onClick={() => onSeek && onSeek(selectedImageClip.start)}
+            >
+              Seek to Start
+            </button>
+          </div>
+        )}
 
         {/* 1. LAYER TAB */}
         {tab === 'layer' && (
