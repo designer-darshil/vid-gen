@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 from config import Config
-from app.models.database import get_standalone_db
+from app.models.database import get_db, get_standalone_db
 
 logger = logging.getLogger(__name__)
 
@@ -14,11 +14,18 @@ class AIService:
     def get_gemini_key(cls) -> str:
         """Retrieves Gemini API key from database settings (user-configured) or environment."""
         try:
-            db = get_standalone_db()
-            row = db.execute("SELECT value FROM settings WHERE key = 'gemini_api_key'").fetchone()
-            db.close()
-            if row is not None:
-                return (row["value"] or "").strip()
+            from flask import has_app_context
+            if has_app_context():
+                db = get_db()
+                row = db.execute("SELECT value FROM settings WHERE key = 'gemini_api_key'").fetchone()
+                if row is not None:
+                    return (row["value"] or "").strip()
+            else:
+                db = get_standalone_db()
+                row = db.execute("SELECT value FROM settings WHERE key = 'gemini_api_key'").fetchone()
+                db.close()
+                if row is not None:
+                    return (row["value"] or "").strip()
         except Exception as e:
             logger.warning("Could not read gemini_api_key from settings: %s", e)
 
@@ -30,6 +37,20 @@ class AIService:
     @classmethod
     def set_gemini_key(cls, key: str):
         """Saves Gemini API key to database settings."""
+        try:
+            from flask import has_app_context
+            if has_app_context():
+                db = get_db()
+                db.execute("""
+                    INSERT INTO settings (key, value, updated_at)
+                    VALUES ('gemini_api_key', ?, CURRENT_TIMESTAMP)
+                    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP
+                """, (key.strip(),))
+                db.commit()
+                return
+        except Exception as e:
+            logger.warning("Could not write gemini_api_key using get_db: %s", e)
+
         db = get_standalone_db()
         try:
             db.execute("""
@@ -54,13 +75,42 @@ class AIService:
 
         try:
             from google import genai
-            client = genai.Client(api_key=key)
-            # Lightweight test prompt
-            response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents="Reply with: OK"
+            client = genai.Client(
+                api_key=key,
+                http_options={"timeout": 3000, "retry_options": {"attempts": 1}}
             )
-            return {"success": True, "message": "Successfully connected to Gemini 2.5 Flash API!"}
+
+            # Try preferred model first, with fallbacks if 404 or deprecated
+            models_to_try = [
+                os.environ.get("GEMINI_MODEL", "gemini-3.8-flash"),
+                "gemini-2.5-flash",
+                "gemini-1.5-flash",
+            ]
+            models_to_try = list(dict.fromkeys(models_to_try))
+
+            last_err = None
+            successful_model = None
+            for model_name in models_to_try:
+                try:
+                    response = client.models.generate_content(
+                        model=model_name,
+                        contents="Reply with: OK"
+                    )
+                    successful_model = model_name
+                    break
+                except Exception as ex:
+                    last_err = ex
+                    err_str = str(ex).lower()
+                    if "not_found" in err_str or "404" in err_str or "no longer available" in err_str:
+                        continue
+                    else:
+                        raise ex
+
+            if not successful_model:
+                raise last_err or Exception("No suitable Gemini model found")
+
+            display_name = successful_model.replace("gemini-", "Gemini ").replace("-", " ").title()
+            return {"success": True, "message": f"Successfully connected to {display_name} API!"}
         except Exception as e:
             err_msg = str(e)
             logger.warning("Gemini connection test failed: %s", err_msg)
@@ -123,7 +173,10 @@ class AIService:
         if api_key:
             try:
                 from google import genai
-                client = genai.Client(api_key=api_key)
+                client = genai.Client(
+                    api_key=api_key,
+                    http_options={"timeout": 3000, "retry_options": {"attempts": 1}}
+                )
 
                 system_instruction = (
                     "You are LyricStudio's elite Creative Director & Motion Typography Designer. "
@@ -145,11 +198,34 @@ class AIService:
 
                 prompt_parts.append("\nRespond with ONLY valid JSON (no markdown formatting, no code blocks):")
 
-                response = client.models.generate_content(
-                    model="gemini-2.5-flash",
-                    contents="".join(prompt_parts),
-                    config={"system_instruction": system_instruction}
-                )
+                models_to_try = [
+                    os.environ.get("GEMINI_MODEL", "gemini-3.8-flash"),
+                    "gemini-2.5-flash",
+                    "gemini-1.5-flash",
+                ]
+                models_to_try = list(dict.fromkeys(models_to_try))
+
+                response = None
+                used_model = None
+                last_ex = None
+                for model_name in models_to_try:
+                    try:
+                        response = client.models.generate_content(
+                            model=model_name,
+                            contents="".join(prompt_parts),
+                            config={"system_instruction": system_instruction}
+                        )
+                        used_model = model_name
+                        break
+                    except Exception as mex:
+                        last_ex = mex
+                        err_str = str(mex).lower()
+                        if "not_found" in err_str or "404" in err_str or "no longer available" in err_str:
+                            continue
+                        raise mex
+
+                if not response or not used_model:
+                    raise last_ex or Exception("No suitable Gemini model found")
 
                 raw_text = response.text.strip()
                 # Clean any markdown code blocks
@@ -159,7 +235,8 @@ class AIService:
 
                 proposal = json.loads(raw_text)
                 proposal["configured"] = True
-                proposal["provider"] = "Gemini 2.5 Flash"
+                display_name = used_model.replace("gemini-", "Gemini ").replace("-", " ").title()
+                proposal["provider"] = display_name
                 return {"success": True, "proposal": proposal}
 
             except Exception as e:
@@ -172,7 +249,7 @@ class AIService:
         local_proposal["provider"] = "Local Creative Engine"
         local_proposal["notice"] = (
             "Generated using local acoustic and artwork color analysis. "
-            "To unlock multimodal Gemini 2.5 Flash AI creative direction, enter your API key in AI Settings."
+            "To unlock multimodal Gemini AI creative direction, enter your API key in AI Settings."
         )
         return {"success": True, "proposal": local_proposal}
 
